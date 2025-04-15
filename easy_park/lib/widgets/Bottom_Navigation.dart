@@ -36,8 +36,8 @@ class _BottomNavigationWidgetState extends State<BottomNavigationWidget> {
 
   Widget _buildMiddleTabItem() {
     return Container(
-      width: 56,
-      height: 56,
+      width: 52,
+      height: 52,
       decoration: BoxDecoration(
         color: const Color(0xFF1A237E),
         shape: BoxShape.circle,
@@ -52,8 +52,8 @@ class _BottomNavigationWidgetState extends State<BottomNavigationWidget> {
       child: IconButton(
         icon: SvgPicture.asset(
           'assets/qrcode.svg',
-          width: 32,
-          height: 32,
+          width: 28,
+          height: 28,
           colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
         ),
         onPressed: () {
@@ -79,7 +79,7 @@ class _BottomNavigationWidgetState extends State<BottomNavigationWidget> {
             elevation: 10,
             child: Container(
               height: 60,
-              padding: const EdgeInsets.symmetric(horizontal: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 4),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -112,8 +112,8 @@ class _BottomNavigationWidgetState extends State<BottomNavigationWidget> {
         children: [
           SvgPicture.asset(
             iconPath,
-            width: 24,
-            height: 24,
+            width: 27,
+            height: 27,
             colorFilter: ColorFilter.mode(
               isSelected ? Colors.black : Colors.grey,
               BlendMode.srcIn,
