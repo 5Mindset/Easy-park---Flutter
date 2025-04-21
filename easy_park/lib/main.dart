@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'views/user/login_screen.dart';  // Path diperbarui ke lokasi baru
 import 'widgets/bottom_navigation.dart'; // Adjust the import path if needed
+import 'views/user/register_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -18,7 +19,7 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.blue,
         fontFamily: 'Roboto',
       ),
-      home: const BottomNavigationWidget(),
+      home: const RegisterScreen(),
     );
   }
 }

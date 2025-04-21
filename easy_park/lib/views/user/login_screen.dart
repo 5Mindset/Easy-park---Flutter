@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
-// Import menggunakan path relatif dalam folder yang sama
+import 'package:easy_park/services/auth_service.dart'; // Pastikan path-nya benar
 import 'forgot_screen.dart';
 import 'register_screen.dart';
+import 'package:easy_park/widgets/Bottom_Navigation.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -112,21 +113,20 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      // Simulate network request
-      await Future.delayed(const Duration(seconds: 1));
+      // Call AuthService.login to perform API login
+      final result = await AuthService.login(
+        _emailController.text,
+        _passwordController.text,
+      );
 
-      // Here you would typically make an API call to authenticate
-      // For now we'll just simulate a successful login
-      final email = _emailController.text;
-      final password = _passwordController.text;
-
-      // For demo purposes, we'll consider this combination as valid
-      if (email == "admin@gmail.com" && password == "password123") {
-        _showSnackBar('Login berhasil!');
-        // Here you would navigate to the next screen
-        // Navigator.of(context).pushReplacementNamed('/home');
+      if (result['success']) {
+        _showSnackBar(result['message']);
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+              builder: (context) => const BottomNavigationWidget()),
+        );
       } else {
-        _showSnackBar('Email atau password salah', isError: true);
+        _showSnackBar(result['message'], isError: true);
       }
     } catch (e) {
       _showSnackBar('Terjadi kesalahan: ${e.toString()}', isError: true);

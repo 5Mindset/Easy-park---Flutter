@@ -9,10 +9,11 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  flutter_svg: ^2.0.17
+  flutter_svg: ^2.0.17  # Pastikan versi ini tetap
   google_fonts: ^6.1.0
-
-  
+  http: ^1.3.0  # Versi yang sesuai dengan `flutter_svg`
+  shared_preferences: ^2.0.15 # pastikan menggunakan versi terbaru yang sesuai
+  email_validator: ^2.1.17
 dev_dependencies:
   flutter_test:
     sdk: flutter
