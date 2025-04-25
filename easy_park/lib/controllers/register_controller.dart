@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../views/login_screen.dart';
+import '../views/user/login_screen.dart';
 
 class RegisterController {
   final TextEditingController usernameController = TextEditingController();

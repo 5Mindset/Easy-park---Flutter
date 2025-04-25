@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../views/register_screen.dart';
+import '../views/user/register_screen.dart';
 
 class LoginController {
   final TextEditingController emailController = TextEditingController();

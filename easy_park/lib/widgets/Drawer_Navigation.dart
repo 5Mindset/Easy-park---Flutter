@@ -16,12 +16,12 @@ class _DrawerNavigationwidgetState extends State<DrawerNavigationwidget> {
   int _selectedIndex = 0;
 
   // List of pages corresponding to each drawer item
-  final List<Widget> _pages = [
-    const ParkirMahasiswa(),
-    const ParkirTamu(),
-    const DaftarMahasiswa(),
-    const DaftarTamu(),
-  ];
+ final List<Widget> _pages = [
+  ParkirMahasiswa(),  // Hapus const
+  ParkirTamu(),  // Hapus const
+  DaftarMahasiswa(),  // Hapus const
+  DaftarTamu(),  // Hapus const
+];
 
   void _onItemTapped(int index) {
     setState(() {
