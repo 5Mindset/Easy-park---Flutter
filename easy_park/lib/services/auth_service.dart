@@ -7,7 +7,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthService {
   // Fungsi REGISTER
-  static Future<Map<String, dynamic>> register(String name, String email, String password) async {
+  static Future<Map<String, dynamic>> register(
+      String name, String email, String password) async {
     final url = Uri.parse('$apiBaseUrl/register');
 
     try {
@@ -51,7 +52,8 @@ class AuthService {
   }
 
   // Fungsi LOGIN
-  static Future<Map<String, dynamic>> login(String email, String password) async {
+  static Future<Map<String, dynamic>> login(
+      String email, String password) async {
     final url = Uri.parse('$apiBaseUrl/login');
 
     try {
@@ -142,6 +144,69 @@ class AuthService {
       return {
         'success': false,
         'message': 'Terjadi kesalahan saat memuat sesi login.',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  // Fungsi UPDATE PROFILE
+  static Future<Map<String, dynamic>> updateProfile({
+    String? name,
+    String? email,
+    String? phoneNumber,
+    String? address,
+  }) async {
+    final url = Uri.parse('$apiBaseUrl/update-profile');
+
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? token = prefs.getString('token');
+
+      if (token == null) {
+        return {
+          'success': false,
+          'message': 'Tidak ada token ditemukan. Silakan login ulang.',
+        };
+      }
+
+      Map<String, dynamic> data = {};
+      if (name != null) data['name'] = name;
+      if (email != null) data['email'] = email;
+      if (phoneNumber != null) data['phone_number'] = phoneNumber;
+      if (address != null) data['address'] = address;
+
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(data),
+      );
+
+      final body = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        // Update data user di SharedPreferences juga
+        prefs.setString('user', jsonEncode(body['user']));
+
+        return {
+          'success': true,
+          'message': body['message'] ?? 'Profil berhasil diperbarui',
+          'user': body['user'],
+        };
+      } else {
+        return {
+          'success': false,
+          'message': body['message'] ?? 'Gagal memperbarui profil',
+          'errors': body['errors'] ?? {},
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Terjadi kesalahan saat memperbarui profil.',
         'error': e.toString(),
       };
     }
