@@ -7,9 +7,16 @@ import 'package:easy_park/constants/api_config.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthService {
-  // Fungsi REGISTER
-  static Future<Map<String, dynamic>> register(
-      String name, String email, String password) async {
+  static Future<Map<String, dynamic>> register({
+    required String name,
+    required String email,
+    required String password,
+    required String nim,
+    required String fullName,
+    required String dateOfBirth, // format: YYYY-MM-DD
+    required String phoneNumber,
+    required String address,
+  }) async {
     final url = Uri.parse('$apiBaseUrl/register');
 
     try {
@@ -23,6 +30,11 @@ class AuthService {
           'name': name,
           'email': email,
           'password': password,
+          'nim': nim,
+          'full_name': fullName,
+          'date_of_birth': dateOfBirth,
+          'phone_number': phoneNumber,
+          'address': address,
         }),
       );
 
@@ -40,7 +52,7 @@ class AuthService {
         return {
           'success': false,
           'message': body['message'] ?? 'Gagal registrasi',
-          'errors': body['errors'] ?? {}, // kalau ada multiple error
+          'errors': body['errors'] ?? {},
         };
       }
     } catch (e) {
@@ -187,7 +199,7 @@ class AuthService {
       );
 
       final body = jsonDecode(response.body);
-      
+
       debugPrint('Update profile response: $body');
 
       if (response.statusCode == 200) {
@@ -222,7 +234,7 @@ class AuthService {
   static Future<Map<String, dynamic>> uploadProfileImage(File imageFile) async {
     debugPrint('Starting profile image upload...');
     final url = Uri.parse('$apiBaseUrl/upload-profile-image');
-    
+
     try {
       // Check if file exists and is valid
       if (!await imageFile.exists()) {
@@ -232,10 +244,10 @@ class AuthService {
           'message': 'File tidak ditemukan.',
         };
       }
-      
+
       int fileSize = await imageFile.length();
       debugPrint('File size: ${fileSize / 1024} KB');
-      
+
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString('token');
 
@@ -253,7 +265,7 @@ class AuthService {
           'Authorization': 'Bearer $token',
           'Accept': 'application/json',
         });
-        
+
       // Add the file to the request
       request.files.add(
         await http.MultipartFile.fromPath(
@@ -266,29 +278,31 @@ class AuthService {
       debugPrint('Sending request...');
       var streamedResponse = await request.send();
       var responseBody = await streamedResponse.stream.bytesToString();
-      
+
       debugPrint('Response status: ${streamedResponse.statusCode}');
       debugPrint('Response body: $responseBody');
-      
+
       final body = jsonDecode(responseBody);
 
-      if (streamedResponse.statusCode == 200 || streamedResponse.statusCode == 201) {
+      if (streamedResponse.statusCode == 200 ||
+          streamedResponse.statusCode == 201) {
         // Extract profile photo URL, handling different possible response formats
         String? profilePhotoUrl;
-        
+
         // Check different possible locations for the profile photo URL
         if (body['user'] != null && body['user']['profile_photo_url'] != null) {
           profilePhotoUrl = body['user']['profile_photo_url'];
         } else if (body['profile_photo_url'] != null) {
           profilePhotoUrl = body['profile_photo_url'];
-        } else if (body['data'] != null && body['data']['profile_photo_url'] != null) {
+        } else if (body['data'] != null &&
+            body['data']['profile_photo_url'] != null) {
           profilePhotoUrl = body['data']['profile_photo_url'];
         } else if (body['url'] != null) {
           profilePhotoUrl = body['url'];
         }
-        
+
         debugPrint('Extracted profile photo URL: $profilePhotoUrl');
-        
+
         // Update user data in SharedPreferences with new image URL
         if (body['user'] != null) {
           await prefs.setString('user', jsonEncode(body['user']));
@@ -331,7 +345,7 @@ class AuthService {
   // Fungsi GET PROFILE
   static Future<Map<String, dynamic>> getProfile() async {
     final url = Uri.parse('$apiBaseUrl/profile');
-    
+
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString('token');
@@ -352,7 +366,7 @@ class AuthService {
       );
 
       final body = jsonDecode(response.body);
-      
+
       debugPrint('Get profile response: $body');
 
       if (response.statusCode == 200) {

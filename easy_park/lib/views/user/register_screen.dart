@@ -3,6 +3,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:easy_park/services/auth_service.dart';
 import 'login_screen.dart';
+import 'package:intl/intl.dart';
 
 class RegisterScreen extends StatelessWidget {
   const RegisterScreen({Key? key}) : super(key: key);
@@ -32,8 +33,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _confirmPasswordController =
-      TextEditingController();
+  final TextEditingController _confirmPasswordController = TextEditingController();
+  final TextEditingController _nimController = TextEditingController();
+  final TextEditingController _namaLengkapController = TextEditingController();
+  final TextEditingController _tanggalLahirController = TextEditingController();
+  final TextEditingController _phoneNumberController = TextEditingController(); // New controller for Phone Number
+  final TextEditingController _addressController = TextEditingController(); // New controller for Address
 
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
@@ -57,6 +62,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _nimController.dispose();
+    _namaLengkapController.dispose();
+    _tanggalLahirController.dispose();
+    _phoneNumberController.dispose();
+    _addressController.dispose();
     super.dispose();
   }
 
@@ -81,6 +91,32 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     if (!email.contains('@')) return false;
     final domain = email.split('@')[1].toLowerCase();
     return domain.isNotEmpty && domain.contains('.');
+  }
+
+  // Function to show date picker
+  Future<void> _selectDate(BuildContext context) async {
+    DateTime? pickedDate = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(1900),
+      lastDate: DateTime.now(),
+      builder: (context, child) {
+        return Theme(
+          data: ThemeData.light().copyWith(
+            primaryColor: const Color(0xFF3D09D9),
+            colorScheme: const ColorScheme.light(primary: Color(0xFF3D09D9)),
+            buttonTheme: const ButtonThemeData(textTheme: ButtonTextTheme.primary),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (pickedDate != null) {
+      setState(() {
+        _tanggalLahirController.text = DateFormat('yyyy-MM-dd').format(pickedDate);
+      });
+    }
   }
 
   @override
@@ -146,6 +182,31 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
                 const SizedBox(height: 16),
 
+                _buildLabel('NIM'),
+                _buildNimField(),
+
+                const SizedBox(height: 16),
+
+                _buildLabel('Nama Lengkap'),
+                _buildNamaLengkapField(),
+
+                const SizedBox(height: 16),
+
+                _buildLabel('Tanggal Lahir'),
+                _buildTanggalLahirField(),
+
+                const SizedBox(height: 16),
+
+                _buildLabel('Nomor Telepon'),
+                _buildPhoneNumberField(), // New Phone Number field
+
+                const SizedBox(height: 16),
+
+                _buildLabel('Alamat'),
+                _buildAddressField(), // New Address field
+
+                const SizedBox(height: 16),
+
                 _buildLabel('Password'),
                 _buildPasswordField(
                   obscureText: !_isPasswordVisible,
@@ -157,9 +218,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                     });
                   },
                 ),
-
-                // Removed the password strength indicators to save space
-                // If you need to show validation feedback differently, you can add a helper text below the password field
 
                 const SizedBox(height: 16),
 
@@ -308,9 +366,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   Widget _buildEmailField() {
     return TextFormField(
       controller: _emailController,
-      keyboardType: TextInputType.emailAddress, // This is correct
-      textInputAction: TextInputAction
-          .next, // Fixed: Changed from TextInputAction.emailAddress to TextInputAction.next
+      keyboardType: TextInputType.emailAddress,
+      textInputAction: TextInputAction.next,
       autocorrect: false,
       decoration: InputDecoration(
         hintText: 'Brandonelouis@gmail.com',
@@ -336,17 +393,215 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         if (value == null || value.isEmpty) {
           return 'Email tidak boleh kosong';
         }
-
-        // Validasi format email
         if (!_isValidEmail(value)) {
           return 'Format email tidak valid';
         }
-
-        // Validasi domain email
         if (!_hasValidDomain(value)) {
           return 'Domain email tidak valid';
         }
+        return null;
+      },
+    );
+  }
 
+  Widget _buildNimField() {
+    return TextFormField(
+      controller: _nimController,
+      textInputAction: TextInputAction.next,
+      keyboardType: TextInputType.text,
+      decoration: InputDecoration(
+        hintText: 'E1234567890',
+        hintStyle: GoogleFonts.dmSans(color: Colors.grey[400]),
+        fillColor: const Color(0xFFF5F5F5),
+        filled: true,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide.none,
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Colors.red),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Color(0xFF3D09D9)),
+        ),
+      ),
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return 'NIM tidak boleh kosong';
+        }
+        if (value.length < 8 || value.length > 15) {
+          return 'NIM harus antara 8-15 digit';
+        }
+        return null;
+      },
+    );
+  }
+
+  Widget _buildNamaLengkapField() {
+    return TextFormField(
+      controller: _namaLengkapController,
+      textInputAction: TextInputAction.next,
+      autocorrect: false,
+      decoration: InputDecoration(
+        hintText: 'Brandone Louis Smith',
+        hintStyle: GoogleFonts.dmSans(color: Colors.grey[400]),
+        fillColor: const Color(0xFFF5F5F5),
+        filled: true,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide.none,
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Colors.red),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Color(0xFF3D09D9)),
+        ),
+      ),
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return 'Nama lengkap tidak boleh kosong';
+        }
+        if (value.length < 3) {
+          return 'Nama lengkap minimal 3 karakter';
+        }
+        if (value.length > 50) {
+          return 'Nama lengkap maksimal 50 karakter';
+        }
+        if (!RegExp(r'^[a-zA-Z\s]+$').hasMatch(value)) {
+          return 'Nama lengkap hanya boleh berisi huruf dan spasi';
+        }
+        return null;
+      },
+    );
+  }
+
+  Widget _buildTanggalLahirField() {
+    return TextFormField(
+      controller: _tanggalLahirController,
+      readOnly: true,
+      textInputAction: TextInputAction.next,
+      decoration: InputDecoration(
+        hintText: 'YYYY-MM-DD',
+        hintStyle: GoogleFonts.dmSans(color: Colors.grey[400]),
+        fillColor: const Color(0xFFF5F5F5),
+        filled: true,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide.none,
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Colors.red),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Color(0xFF3D09D9)),
+        ),
+        suffixIcon: IconButton(
+          icon: const Icon(
+            Icons.calendar_today,
+            color: Color(0xFF666666),
+          ),
+          onPressed: () => _selectDate(context),
+        ),
+      ),
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return 'Tanggal lahir tidak boleh kosong';
+        }
+        try {
+          DateFormat('yyyy-MM-dd').parseStrict(value);
+        } catch (e) {
+          return 'Format tanggal tidak valid (YYYY-MM-DD)';
+        }
+        return null;
+      },
+    );
+  }
+
+  Widget _buildPhoneNumberField() {
+    return TextFormField(
+      controller: _phoneNumberController,
+      textInputAction: TextInputAction.next,
+      keyboardType: TextInputType.phone,
+      decoration: InputDecoration(
+        hintText: '081234567890',
+        hintStyle: GoogleFonts.dmSans(color: Colors.grey[400]),
+        fillColor: const Color(0xFFF5F5F5),
+        filled: true,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide.none,
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Colors.red),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Color(0xFF3D09D9)),
+        ),
+      ),
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return 'Nomor telepon tidak boleh kosong';
+        }
+        if (!RegExp(r'^\+?[0-9]{8,15}$').hasMatch(value)) {
+          return 'Nomor telepon harus berupa angka dan antara 8-15 digit';
+        }
+        return null;
+      },
+    );
+  }
+
+  Widget _buildAddressField() {
+    return TextFormField(
+      controller: _addressController,
+      textInputAction: TextInputAction.next,
+      maxLines: 3, // Allow multiple lines for address
+      decoration: InputDecoration(
+        hintText: 'Jl. Contoh No. 123, Kota Contoh',
+        hintStyle: GoogleFonts.dmSans(color: Colors.grey[400]),
+        fillColor: const Color(0xFFF5F5F5),
+        filled: true,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide.none,
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Colors.red),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Color(0xFF3D09D9)),
+        ),
+      ),
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return 'Alamat tidak boleh kosong';
+        }
+        if (value.length < 5) {
+          return 'Alamat minimal 5 karakter';
+        }
+        if (value.length > 255) {
+          return 'Alamat maksimal 255 karakter';
+        }
         return null;
       },
     );
@@ -463,9 +718,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     );
   }
 
-  // Removed _buildStrengthIndicator since we're not displaying the indicators anymore
-  // Widget _buildStrengthIndicator(String label, bool isValid) { ... }
-
   Future<void> _handleRegister() async {
     // Menghilangkan fokus keyboard
     FocusScope.of(context).unfocus();
@@ -483,12 +735,26 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       final name = _nameController.text.trim();
       final email = _emailController.text.trim();
       final password = _passwordController.text;
+      final nim = _nimController.text.trim();
+      final namaLengkap = _namaLengkapController.text.trim();
+      final tanggalLahir = _tanggalLahirController.text;
+      final phoneNumber = _phoneNumberController.text.trim();
+      final address = _addressController.text.trim();
 
       // Implementasi throttling sederhana untuk mencegah spam pendaftaran
       await Future.delayed(const Duration(milliseconds: 300));
 
       // Menggunakan try-catch untuk menangkap error dari API
-      final result = await AuthService.register(name, email, password);
+      final result = await AuthService.register(
+        name: name,
+        email: email,
+        password: password,
+        nim: nim,
+        fullName: namaLengkap,
+        dateOfBirth: tanggalLahir,
+        phoneNumber: phoneNumber,
+        address: address,
+      );
 
       if (result['success']) {
         // Menampilkan pesan sukses

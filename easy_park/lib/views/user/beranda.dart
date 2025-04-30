@@ -9,157 +9,156 @@ class Beranda extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header with greeting and logo
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text(
-                        'Halo',
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF1A1A3A),
-                        ),
-                      ),
-                      Text(
-                        'Pengguna',
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF1A1A3A),
-                        ),
-                      ),
-                    ],
-                  ),
-                  SvgPicture.asset(
-                    'assets/park.svg',
-                    width: 120, // Increased width for better horizontal display
-                    height: 85,
-                    fit: BoxFit
-                        .contain, // This ensures the SVG maintains its aspect ratio
-                  ),
-                ],
-              ),
-              const SizedBox(height: 0),
-
-              // Status card
-              Stack(
-                children: [
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1A1A3A),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
+        child: SingleChildScrollView( // Wrap the entire content in SingleChildScrollView
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header with greeting and logo
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: const [
                         Text(
-                          'Status',
+                          'Halo',
                           style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 14,
-                          ),
-                        ),
-                        SizedBox(height: 10),
-                        Text(
-                          'Terparkir',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 32,
+                            fontSize: 22,
                             fontWeight: FontWeight.bold,
+                            color: Color(0xFF1A1A3A),
                           ),
                         ),
-                        SizedBox(height: 35),
                         Text(
-                          '13/03/2025',
+                          'Pengguna',
                           style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 14,
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF1A1A3A),
                           ),
                         ),
                       ],
                     ),
-                  ),
-                  Positioned(
-                    right: 0,
-                    top: 2,
-                    child: SvgPicture.asset(
-                      'assets/driver.svg',
-                      width: 170,
+                    SvgPicture.asset(
+                      'assets/park.svg',
+                      width: 120,
+                      height: 85,
+                      fit: BoxFit.contain,
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 15),
-
-              // Features section
-              const Text(
-                'Fitur',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1A1A3A),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 15),
-              Row(
-                children: [
-                  Expanded(
-                    child: FeatureButton(
-                      title: 'Scan\nKode QR',
-                      color: const Color(0xFFB3E5FC),
-                      icon: 'assets/qrcode2.svg',
-                      onTap: () {},
-                    ),
-                  ),
-                  const SizedBox(width: 15),
-                  Expanded(
-                    child: FeatureButton(
-                      title: 'Kontak',
-                      color: const Color(0xFFD1C4E9),
-                      icon: 'assets/call.svg',
-                      onTap: () {},
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 15),
-              Row(
-                children: [
-                  Expanded(
-                    child: FeatureButton(
-                      title: 'Panduan',
-                      color: const Color(0xFFFFE0B2),
-                      icon: 'assets/guide.svg',
-                      onTap: () {},
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 25),
+                const SizedBox(height: 0),
 
-              // History section
-              const Text(
-                'Histori',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1A1A3A),
+                // Status card
+                Stack(
+                  children: [
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1A1A3A),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: const [
+                          Text(
+                            'Status',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                            ),
+                          ),
+                          SizedBox(height: 10),
+                          Text(
+                            'Terparkir',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 32,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          SizedBox(height: 35),
+                          Text(
+                            '13/03/2025',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Positioned(
+                      right: 0,
+                      top: 2,
+                      child: SvgPicture.asset(
+                        'assets/driver.svg',
+                        width: 170,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 15),
-              Expanded(
-                child: Container(
+                const SizedBox(height: 15),
+
+                // Features section
+                const Text(
+                  'Fitur',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1A1A3A),
+                  ),
+                ),
+                const SizedBox(height: 15),
+                Row(
+                  children: [
+                    Expanded(
+                      child: FeatureButton(
+                        title: 'Scan\nKode QR',
+                        color: const Color(0xFFB3E5FC),
+                        icon: 'assets/qrcode2.svg',
+                        onTap: () {},
+                      ),
+                    ),
+                    const SizedBox(width: 15),
+                    Expanded(
+                      child: FeatureButton(
+                        title: 'Kontak',
+                        color: const Color(0xFFD1C4E9),
+                        icon: 'assets/call.svg',
+                        onTap: () {},
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 15),
+                Row(
+                  children: [
+                    Expanded(
+                      child: FeatureButton(
+                        title: 'Panduan',
+                        color: const Color(0xFFFFE0B2),
+                        icon: 'assets/guide.svg',
+                        onTap: () {},
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 25),
+
+                // History section
+                const Text(
+                  'Histori',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1A1A3A),
+                  ),
+                ),
+                const SizedBox(height: 15),
+                Container(
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(12),
@@ -171,8 +170,7 @@ class Beranda extends StatelessWidget {
                       ),
                     ],
                   ),
-                  child: ListView(
-                    padding: const EdgeInsets.all(15),
+                  child: Column( // Replace ListView with Column
                     children: const [
                       HistoryItem(
                         vehicle: 'beat',
@@ -201,8 +199,9 @@ class Beranda extends StatelessWidget {
                     ],
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 20), // Add some padding at the bottom
+              ],
+            ),
           ),
         ),
       ),
@@ -285,7 +284,7 @@ class HistoryItem extends StatelessWidget {
         : const Color(0xFFE53935); // Red for 'Keluar'
 
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 15),
+      padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 15),
       decoration: const BoxDecoration(
         border: Border(
           bottom: BorderSide(
@@ -338,7 +337,7 @@ class HistoryItem extends StatelessWidget {
                     action,
                     style: TextStyle(
                       fontSize: 12,
-                      color: actionColor, // Use the dynamic color here
+                      color: actionColor,
                     ),
                   ),
                 ],
