@@ -162,12 +162,14 @@ class AuthService {
     }
   }
 
-  // Fungsi UPDATE PROFILE
   static Future<Map<String, dynamic>> updateProfile({
     String? name,
     String? email,
     String? phoneNumber,
     String? address,
+    String? nim,
+    String? fullName,
+    String? dateOfBirth, // format: YYYY-MM-DD
   }) async {
     final url = Uri.parse('$apiBaseUrl/update-profile');
 
@@ -187,6 +189,9 @@ class AuthService {
       if (email != null) data['email'] = email;
       if (phoneNumber != null) data['phone_number'] = phoneNumber;
       if (address != null) data['address'] = address;
+      if (nim != null) data['nim'] = nim;
+      if (fullName != null) data['full_name'] = fullName;
+      if (dateOfBirth != null) data['date_of_birth'] = dateOfBirth;
 
       final response = await http.put(
         url,
@@ -199,11 +204,9 @@ class AuthService {
       );
 
       final body = jsonDecode(response.body);
-
       debugPrint('Update profile response: $body');
 
       if (response.statusCode == 200) {
-        // Update data user di SharedPreferences juga
         if (body['user'] != null) {
           prefs.setString('user', jsonEncode(body['user']));
         }

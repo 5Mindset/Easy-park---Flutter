@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:intl/intl.dart';
 import 'login_screen.dart';
 import 'package:easy_park/services/auth_service.dart';
 import 'package:easy_park/constants/api_config.dart';
@@ -20,12 +21,16 @@ class _ProfileState extends State<Profile> {
   final TextEditingController _alamatController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _noTelpController = TextEditingController();
+  final TextEditingController _nimController = TextEditingController();
+  final TextEditingController _fullNameController = TextEditingController();
+  final TextEditingController _dateOfBirthController = TextEditingController();
+
   bool _isLoading = false;
 
   // State variables
   String _displayName = 'User';
   String _displayEmail = 'user@example.com';
-  String? _profileImageUrl; // This will hold the image URL from the backend
+  String? _profileImageUrl;
 
   @override
   void initState() {
@@ -44,12 +49,27 @@ class _ProfileState extends State<Profile> {
         setState(() {
           _displayName = user['name'] ?? 'User';
           _displayEmail = user['email'] ?? 'user@example.com';
-          _profileImageUrl = user['image']; // Use 'image' key as per backend response
+          _profileImageUrl = user['image'];
 
           _usernameController.text = user['name'] ?? '';
           _alamatController.text = user['address'] ?? '';
           _emailController.text = user['email'] ?? '';
           _noTelpController.text = user['phone_number'] ?? '';
+          _nimController.text = user['nim'] ?? '';
+          _fullNameController.text = user['full_name'] ?? '';
+          
+          // Clean up date format if needed
+          if (user['date_of_birth'] != null && user['date_of_birth'].isNotEmpty) {
+            try {
+              // Parse the date regardless of its format, then reformat it
+              DateTime dateTime = DateTime.parse(user['date_of_birth']);
+              _dateOfBirthController.text = DateFormat('yyyy-MM-dd').format(dateTime);
+            } catch (e) {
+              // If parsing fails, use the raw value
+              _dateOfBirthController.text = user['date_of_birth'];
+              debugPrint('Error parsing date: $e');
+            }
+          }
         });
 
         debugPrint('Profile image URL loaded: $_profileImageUrl');
@@ -92,25 +112,154 @@ class _ProfileState extends State<Profile> {
     }
   }
 
+  // Function to validate email format
+  bool _isValidEmail(String email) {
+    final emailRegExp = RegExp(r'^[a-zA-Z0-9.]+@[a-zA-Z0-9]+\.[a-zA-Z]+');
+    return emailRegExp.hasMatch(email);
+  }
+
+  // Function to check if email is from a valid domain
+  bool _hasValidDomain(String email) {
+    if (!email.contains('@')) return false;
+    final domain = email.split('@')[1].toLowerCase();
+    return domain.isNotEmpty && domain.contains('.');
+  }
+
+  // Function to show date picker
+  Future<void> _selectDate(BuildContext context) async {
+    DateTime? pickedDate = await showDatePicker(
+      context: context,
+      initialDate: _dateOfBirthController.text.isNotEmpty
+          ? DateFormat('yyyy-MM-dd').parse(_dateOfBirthController.text)
+          : DateTime.now(),
+      firstDate: DateTime(1900),
+      lastDate: DateTime.now(),
+      builder: (context, child) {
+        return Theme(
+          data: ThemeData.light().copyWith(
+            primaryColor: const Color(0xFF130160),
+            colorScheme: const ColorScheme.light(primary: Color(0xFF130160)),
+            buttonTheme: const ButtonThemeData(textTheme: ButtonTextTheme.primary),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (pickedDate != null) {
+      // Format the date without time component
+      setState(() {
+        _dateOfBirthController.text = DateFormat('yyyy-MM-dd').format(pickedDate);
+      });
+    }
+  }
+
   Future<void> _handleUpdateProfile() async {
     final name = _usernameController.text.trim();
     final email = _emailController.text.trim();
     final phoneNumber = _noTelpController.text.trim();
     final address = _alamatController.text.trim();
+    final nim = _nimController.text.trim();
+    final fullName = _fullNameController.text.trim();
+    final dateOfBirth = _dateOfBirthController.text.trim();
 
-    if (name.isEmpty ||
-        email.isEmpty ||
-        phoneNumber.isEmpty ||
-        address.isEmpty) {
-      if (mounted) {
+    // Validation checks based on backend rules
+    if (name.isNotEmpty && name.length > 100) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Username maksimal 100 karakter'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (email.isNotEmpty) {
+      if (!_isValidEmail(email)) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Semua field harus diisi.'),
+            content: Text('Format email tidak valid'),
             backgroundColor: Colors.red,
           ),
         );
+        return;
       }
+      if (!_hasValidDomain(email)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Domain email tidak valid'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+    }
+
+    if (phoneNumber.isNotEmpty) {
+      if (!RegExp(r'^\+?[0-9]{8,20}$').hasMatch(phoneNumber)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Nomor telepon harus berupa angka dan antara 8-20 digit'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+    }
+
+    if (address.isNotEmpty && address.length > 255) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Alamat maksimal 255 karakter'),
+          backgroundColor: Colors.red,
+        ),
+      );
       return;
+    }
+
+    if (nim.isNotEmpty && (nim.length < 8 || nim.length > 15)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('NIM harus antara 8-15 digit'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (fullName.isNotEmpty) {
+      if (fullName.length > 255) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Nama lengkap maksimal 255 karakter'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+      if (!RegExp(r'^[a-zA-Z\s]+$').hasMatch(fullName)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Nama lengkap hanya boleh berisi huruf dan spasi'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+    }
+
+    if (dateOfBirth.isNotEmpty) {
+      try {
+        DateFormat('yyyy-MM-dd').parseStrict(dateOfBirth);
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Format tanggal tidak valid (YYYY-MM-DD)'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
     }
 
     setState(() {
@@ -119,19 +268,25 @@ class _ProfileState extends State<Profile> {
 
     try {
       final result = await AuthService.updateProfile(
-        name: name,
-        email: email,
-        phoneNumber: phoneNumber,
-        address: address,
+        name: name.isNotEmpty ? name : null,
+        email: email.isNotEmpty ? email : null,
+        phoneNumber: phoneNumber.isNotEmpty ? phoneNumber : null,
+        address: address.isNotEmpty ? address : null,
+        nim: nim.isNotEmpty ? nim : null,
+        fullName: fullName.isNotEmpty ? fullName : null,
+        dateOfBirth: dateOfBirth.isNotEmpty ? dateOfBirth : null,
       );
 
       if (mounted) {
         setState(() {
           _isLoading = false;
           if (result['success']) {
-            _displayName = name;
-            _displayEmail = email;
-            _profileImageUrl = result['user']['image']; // Update image if changed
+            _displayName = name.isNotEmpty ? name : _displayName;
+            _displayEmail = email.isNotEmpty ? email : _displayEmail;
+            _profileImageUrl = result['user']['image'];
+            
+            // Also update local user data
+            _updateLocalUserData(result['user']);
           }
         });
 
@@ -157,13 +312,42 @@ class _ProfileState extends State<Profile> {
       }
     }
   }
+  
+  // Helper method to update local user data in SharedPreferences
+  Future<void> _updateLocalUserData(Map<String, dynamic> userData) async {
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? existingUserData = prefs.getString('user');
+      
+      if (existingUserData != null) {
+        Map<String, dynamic> user = jsonDecode(existingUserData);
+        
+        // Update with new data
+        user.addAll(userData);
+        
+        // Clean date format if needed
+        if (user['date_of_birth'] != null && user['date_of_birth'].toString().contains('T')) {
+          try {
+            DateTime dateTime = DateTime.parse(user['date_of_birth']);
+            user['date_of_birth'] = DateFormat('yyyy-MM-dd').format(dateTime);
+          } catch (e) {
+            debugPrint('Error formatting date for local storage: $e');
+          }
+        }
+        
+        await prefs.setString('user', jsonEncode(user));
+      }
+    } catch (e) {
+      debugPrint('Error updating local user data: $e');
+    }
+  }
 
   Future<void> _pickAndUploadImage(ImageSource source) async {
     try {
       final picker = ImagePicker();
       final pickedFile = await picker.pickImage(
         source: source,
-        imageQuality: 70, // Compress image for faster upload
+        imageQuality: 70,
       );
 
       if (pickedFile != null) {
@@ -178,7 +362,6 @@ class _ProfileState extends State<Profile> {
           });
         }
 
-        // Upload the image file using AuthService
         final result = await AuthService.uploadProfileImage(imageFile);
 
         debugPrint('Upload response: $result');
@@ -188,7 +371,6 @@ class _ProfileState extends State<Profile> {
             _isLoading = false;
           });
 
-          // Show feedback message
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(result['message'] ?? 'Proses upload selesai'),
@@ -197,13 +379,11 @@ class _ProfileState extends State<Profile> {
           );
 
           if (result['success']) {
-            // Update the profile image URL from the response
             String? newProfileImageUrl = result['user']?['image'] ?? result['image'];
 
             if (newProfileImageUrl != null) {
               debugPrint('New profile image URL: $newProfileImageUrl');
 
-              // Update SharedPreferences with new image URL
               SharedPreferences prefs = await SharedPreferences.getInstance();
               String? userData = prefs.getString('user');
 
@@ -212,7 +392,6 @@ class _ProfileState extends State<Profile> {
                 user['image'] = newProfileImageUrl;
                 await prefs.setString('user', jsonEncode(user));
 
-                // Update UI
                 setState(() {
                   _profileImageUrl = newProfileImageUrl;
                 });
@@ -342,7 +521,7 @@ class _ProfileState extends State<Profile> {
                               child: ClipOval(
                                 child: _profileImageUrl != null && _profileImageUrl!.isNotEmpty
                                     ? Image.network(
-                                        '$baseUrl/$_profileImageUrl', // Use dynamic baseUrl
+                                        '$baseUrl/$_profileImageUrl',
                                         fit: BoxFit.cover,
                                         width: 80,
                                         height: 80,
@@ -430,14 +609,20 @@ class _ProfileState extends State<Profile> {
                         _buildTextField(
                             'Username', _usernameController, 'Brandone Louis'),
                         const SizedBox(height: 16),
-                        _buildTextField('Alamat', _alamatController,
-                            'California, United States'),
-                        const SizedBox(height: 16),
-                        _buildTextField('Email', _emailController,
-                            'Brandonelouis@gmail.com'),
+                        _buildTextField('NIM', _nimController, 'E1234567890'),
                         const SizedBox(height: 16),
                         _buildTextField(
-                            'No Telp', _noTelpController, '619 3456 7890'),
+                            'Nama Lengkap', _fullNameController, 'Brandone Louis Smith'),
+                        const SizedBox(height: 16),
+                        _buildDateField(
+                            'Tanggal Lahir', _dateOfBirthController, '1990-01-01'),
+                        const SizedBox(height: 16),
+                        _buildTextField(
+                            'Alamat', _alamatController, 'California, United States'),
+                        const SizedBox(height: 16),
+                        _buildTextField('Email', _emailController, 'Brandonelouis@gmail.com'),
+                        const SizedBox(height: 16),
+                        _buildTextField('No Telp', _noTelpController, '619 3456 7890'),
                         const SizedBox(height: 32),
                         SizedBox(
                           width: double.infinity,
@@ -504,6 +689,50 @@ class _ProfileState extends State<Profile> {
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide(color: Colors.grey.shade200),
+            ),
+          ),
+          style: const TextStyle(fontSize: 16),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDateField(
+      String label, TextEditingController controller, String hintText) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 14,
+            color: Colors.grey,
+          ),
+        ),
+        const SizedBox(height: 6),
+        TextFormField(
+          controller: controller,
+          readOnly: true,
+          decoration: InputDecoration(
+            hintText: hintText,
+            filled: true,
+            fillColor: Colors.white,
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey.shade200),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey.shade200),
+            ),
+            suffixIcon: IconButton(
+              icon: const Icon(
+                Icons.calendar_today,
+                color: Colors.grey,
+              ),
+              onPressed: () => _selectDate(context),
             ),
           ),
           style: const TextStyle(fontSize: 16),
