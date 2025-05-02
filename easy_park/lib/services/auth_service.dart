@@ -135,31 +135,35 @@ class AuthService {
 
   // Fungsi untuk AUTO LOGIN (cek token di SharedPreferences)
   static Future<Map<String, dynamic>> autoLogin() async {
-    try {
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      String? token = prefs.getString('token');
-      String? user = prefs.getString('user');
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+    final userJson = prefs.getString('user');
 
-      if (token != null && user != null) {
-        return {
-          'success': true,
-          'message': 'Auto login berhasil',
-          'token': token,
-          'user': jsonDecode(user),
-        };
-      } else {
-        return {
-          'success': false,
-          'message': 'Tidak ada sesi login yang ditemukan',
-        };
+    if (token != null && userJson != null) {
+      final user = jsonDecode(userJson);
+      final roleId = user['role_id'];
+      String redirectTo = '';
+
+      switch (roleId) {
+        case 2:
+          redirectTo = 'petugasHome';
+          break;
+        case 3:
+          redirectTo = 'Bottom_Navigation';
+          break;
+        default:
+          redirectTo = 'home';
       }
-    } catch (e) {
+
       return {
-        'success': false,
-        'message': 'Terjadi kesalahan saat memuat sesi login.',
-        'error': e.toString(),
+        'success': true,
+        'redirect_to': redirectTo,
       };
     }
+
+    return {
+      'success': false,
+    };
   }
 
   static Future<Map<String, dynamic>> updateProfile({

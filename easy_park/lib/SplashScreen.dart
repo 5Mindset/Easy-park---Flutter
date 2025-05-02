@@ -4,6 +4,8 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'views/user/login_screen.dart';
 import 'services/auth_service.dart';
 import 'widgets/Bottom_Navigation.dart';
+import 'widgets/Drawer_Navigation.dart';
+
 class SplashScreen extends StatefulWidget {
   const SplashScreen({Key? key}) : super(key: key);
 
@@ -19,24 +21,35 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> checkLoginStatus() async {
-    final result = await AuthService.autoLogin(); // ⬅️ Panggil autoLogin()
+    final result = await AuthService.autoLogin();
 
-    await Future.delayed(const Duration(seconds: 2)); // 🔵 kasih delay biar splash muncul 2 detik
+    await Future.delayed(const Duration(seconds: 2)); // Biar splash kelihatan
 
-    if (mounted) {
-      if (result['success'] == true) {
-        // Kalau autoLogin berhasil, ke HomeScreen
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const BottomNavigationWidget()),
-        );
+    if (!mounted) return;
+
+    if (result['success'] == true) {
+      final redirectTo = result['redirect_to'];
+      Widget targetPage;
+
+      if (redirectTo == 'Bottom_Navigation') {
+        targetPage = const BottomNavigationWidget(); // Mahasiswa
+      } else if (redirectTo == 'petugasHome') {
+        targetPage = const DrawerNavigationwidget(); // Petugas
       } else {
-        // Kalau gagal, ke LoginScreen
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const LoginScreen()),
-        );
+        targetPage = const Scaffold(
+          body: Center(child: Text('Halaman tidak ditemukan')),
+        ); // fallback
       }
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => targetPage),
+      );
+    } else {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
+      );
     }
   }
 

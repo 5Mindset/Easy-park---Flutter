@@ -4,6 +4,8 @@ import '../views/petugas/parkir_mahasiswa.dart';
 import '../views/petugas/parkir_tamu.dart';
 import '../views/petugas/daftar_mahasiswa.dart';
 import '../views/petugas/daftar_tamu.dart';
+import 'package:easy_park/views/user/login_screen.dart';
+import 'package:easy_park/services/auth_service.dart';
 
 class DrawerNavigationwidget extends StatefulWidget {
   const DrawerNavigationwidget({Key? key}) : super(key: key);
@@ -155,9 +157,22 @@ class CustomDrawer extends StatelessWidget {
               height: 24,
             ),
             title: const Text('Log out'),
-            onTap: () {
-              Navigator.pop(context);
-              // Implement logout functionality
+            onTap: () async {
+              Navigator.pop(context); // tutup drawer
+
+              final result = await AuthService.logout();
+
+              if (result['success']) {
+                // Pindah ke LoginScreen dan hapus seluruh history
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (context) => LoginScreen()),
+                  (route) => false,
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(result['message'] ?? 'Logout gagal')),
+                );
+              }
             },
           ),
         ],
