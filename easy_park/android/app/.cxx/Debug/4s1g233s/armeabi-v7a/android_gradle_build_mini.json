@@ -1,0 +1,20 @@
+{
+  "buildFiles": [
+    "D:\\flutter\\packages\\flutter_tools\\gradle\\src\\main\\groovy\\CMakeLists.txt"
+  ],
+  "cleanCommandsComponents": [
+    [
+      "D:\\SDK-ANDROID\\cmake\\3.22.1\\bin\\ninja.exe",
+      "-C",
+      "D:\\TEST PROJECT FLUTTER\\Easy-park---Flutter-1\\easy_park\\android\\app\\.cxx\\Debug\\4s1g233s\\armeabi-v7a",
+      "clean"
+    ]
+  ],
+  "buildTargetsCommandComponents": [
+    "D:\\SDK-ANDROID\\cmake\\3.22.1\\bin\\ninja.exe",
+    "-C",
+    "D:\\TEST PROJECT FLUTTER\\Easy-park---Flutter-1\\easy_park\\android\\app\\.cxx\\Debug\\4s1g233s\\armeabi-v7a",
+    "{LIST_OF_TARGETS_TO_BUILD}"
+  ],
+  "libraries": {}
+}

@@ -5,6 +5,7 @@ import 'package:easy_park/services/auth_service.dart'; // Pastikan path-nya bena
 import 'forgot_screen.dart';
 import 'register_screen.dart';
 import 'package:easy_park/widgets/Bottom_Navigation.dart';
+import 'package:easy_park/widgets/Drawer_Navigation.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -96,47 +97,62 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   // Full form validation and login process
-  Future<void> _login() async {
-    // Validate both fields on button press
-    _validateEmail(_emailController.text);
-    _validatePassword(_passwordController.text);
+Future<void> _login() async {
+  // Validate both fields on button press
+  _validateEmail(_emailController.text);
+  _validatePassword(_passwordController.text);
 
-    // If any field has errors, stop the login process
-    if (_emailHasError || _passwordHasError) {
-      _showSnackBar('Harap perbaiki kesalahan pada form', isError: true);
-      return;
-    }
-
-    // Show loading state
-    setState(() {
-      _isSubmitting = true;
-    });
-
-    try {
-      // Call AuthService.login to perform API login
-      final result = await AuthService.login(
-        _emailController.text,
-        _passwordController.text,
-      );
-
-      if (result['success']) {
-        _showSnackBar(result['message']);
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-              builder: (context) => const BottomNavigationWidget()),
-        );
-      } else {
-        _showSnackBar(result['message'], isError: true);
-      }
-    } catch (e) {
-      _showSnackBar('Terjadi kesalahan: ${e.toString()}', isError: true);
-    } finally {
-      // Hide loading state
-      setState(() {
-        _isSubmitting = false;
-      });
-    }
+  // If any field has errors, stop the login process
+  if (_emailHasError || _passwordHasError) {
+    _showSnackBar('Harap perbaiki kesalahan pada form', isError: true);
+    return;
   }
+
+  // Show loading state
+  setState(() {
+    _isSubmitting = true;
+  });
+
+  try {
+    // Call AuthService.login to perform API login
+    final result = await AuthService.login(
+      _emailController.text,
+      _passwordController.text,
+    );
+
+    if (result['success']) {
+      _showSnackBar(result['message']);
+
+      // Redirect sesuai peran
+      final redirectTo = result['redirect_to'];
+      Widget targetPage;
+
+      if (redirectTo == 'Bottom_Navigation') {
+        targetPage = const BottomNavigationWidget(); // Mahasiswa
+      } else if (redirectTo == 'petugasHome') {
+        targetPage = const DrawerNavigationwidget();// Petugas
+      } else {
+        targetPage = const Scaffold(
+          body: Center(child: Text('Halaman tidak ditemukan')),
+        ); // Fallback
+      }
+
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => targetPage),
+      );
+    } else {
+      _showSnackBar(result['message'], isError: true);
+    }
+  } catch (e) {
+    _showSnackBar('Terjadi kesalahan: ${e.toString()}', isError: true);
+  } finally {
+    // Hide loading state
+    setState(() {
+      _isSubmitting = false;
+    });
+  }
+}
+
 
   @override
   Widget build(BuildContext context) {
