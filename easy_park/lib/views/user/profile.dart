@@ -3,11 +3,11 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
-import 'login_screen.dart';
+import 'package:easy_park/views/user/login_screen.dart';
 import 'package:easy_park/services/auth_service.dart';
 import 'package:easy_park/constants/api_config.dart';
+import 'package:easy_park/services/local_db_service.dart';
 
 class Profile extends StatefulWidget {
   const Profile({Key? key}) : super(key: key);
@@ -40,11 +40,9 @@ class _ProfileState extends State<Profile> {
 
   Future<void> _loadUserData() async {
     try {
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      String? userData = prefs.getString('user');
-
-      if (userData != null) {
-        Map<String, dynamic> user = jsonDecode(userData);
+      final savedUser = await LocalDbService.getLogin();
+      if (savedUser != null) {
+        final user = jsonDecode(savedUser['user_json'] as String);
 
         setState(() {
           _displayName = user['name'] ?? 'User';
@@ -57,7 +55,7 @@ class _ProfileState extends State<Profile> {
           _noTelpController.text = user['phone_number'] ?? '';
           _nimController.text = user['nim'] ?? '';
           _fullNameController.text = user['full_name'] ?? '';
-          
+
           // Clean up date format if needed
           if (user['date_of_birth'] != null && user['date_of_birth'].isNotEmpty) {
             try {
@@ -74,24 +72,27 @@ class _ProfileState extends State<Profile> {
 
         debugPrint('Profile image URL loaded: $_profileImageUrl');
       } else {
-        debugPrint('No user data found in SharedPreferences');
+        debugPrint('No user data found in LocalDbService');
       }
     } catch (e) {
       debugPrint('Error loading user data: $e');
     }
   }
 
-  Future<void> _handleLogout() async {
+  Future<void> _handleLogout(BuildContext context) async {
     try {
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      await prefs.remove('token');
-      await prefs.remove('user');
+      // Clear login data from LocalDbService
+      await LocalDbService.deleteLogin();
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text('Logout berhasil'),
             backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            margin: EdgeInsets.all(16),
+            duration: Duration(seconds: 3),
           ),
         );
         Navigator.pushAndRemoveUntil(
@@ -106,6 +107,10 @@ class _ProfileState extends State<Profile> {
           SnackBar(
             content: Text('Gagal logout: $e'),
             backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            margin: EdgeInsets.all(16),
+            duration: Duration(seconds: 3),
           ),
         );
       }
@@ -284,9 +289,6 @@ class _ProfileState extends State<Profile> {
             _displayName = name.isNotEmpty ? name : _displayName;
             _displayEmail = email.isNotEmpty ? email : _displayEmail;
             _profileImageUrl = result['user']['image'];
-            
-            // Also update local user data
-            _updateLocalUserData(result['user']);
           }
         });
 
@@ -294,6 +296,10 @@ class _ProfileState extends State<Profile> {
           SnackBar(
             content: Text(result['message'] ?? 'Profil berhasil diperbarui'),
             backgroundColor: result['success'] ? Colors.green : Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            margin: EdgeInsets.all(16),
+            duration: Duration(seconds: 3),
           ),
         );
       }
@@ -307,35 +313,42 @@ class _ProfileState extends State<Profile> {
           SnackBar(
             content: Text('Error: $e'),
             backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            margin: EdgeInsets.all(16),
+            duration: Duration(seconds: 3),
           ),
         );
       }
     }
   }
-  
-  // Helper method to update local user data in SharedPreferences
+
+  // Helper method to update local user data in LocalDbService
   Future<void> _updateLocalUserData(Map<String, dynamic> userData) async {
     try {
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      String? existingUserData = prefs.getString('user');
-      
-      if (existingUserData != null) {
-        Map<String, dynamic> user = jsonDecode(existingUserData);
-        
+      final savedUser = await LocalDbService.getLogin();
+      if (savedUser != null) {
+        final currentUser = jsonDecode(savedUser['user_json'] as String);
         // Update with new data
-        user.addAll(userData);
-        
+        currentUser.addAll(userData);
+
         // Clean date format if needed
-        if (user['date_of_birth'] != null && user['date_of_birth'].toString().contains('T')) {
+        if (currentUser['date_of_birth'] != null &&
+            currentUser['date_of_birth'].toString().contains('T')) {
           try {
-            DateTime dateTime = DateTime.parse(user['date_of_birth']);
-            user['date_of_birth'] = DateFormat('yyyy-MM-dd').format(dateTime);
+            DateTime dateTime = DateTime.parse(currentUser['date_of_birth']);
+            currentUser['date_of_birth'] = DateFormat('yyyy-MM-dd').format(dateTime);
           } catch (e) {
             debugPrint('Error formatting date for local storage: $e');
           }
         }
-        
-        await prefs.setString('user', jsonEncode(user));
+
+        await LocalDbService.saveLogin(
+          email: savedUser['email'] as String,
+          token: savedUser['token'] as String,
+          role: savedUser['role'] as String,
+          userJson: jsonEncode(currentUser),
+        );
       }
     } catch (e) {
       debugPrint('Error updating local user data: $e');
@@ -375,22 +388,30 @@ class _ProfileState extends State<Profile> {
             SnackBar(
               content: Text(result['message'] ?? 'Proses upload selesai'),
               backgroundColor: result['success'] ? Colors.green : Colors.red,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              margin: EdgeInsets.all(16),
+              duration: Duration(seconds: 3),
             ),
           );
 
           if (result['success']) {
-            String? newProfileImageUrl = result['user']?['image'] ?? result['image'];
+            String? newProfileImageUrl =
+                result['user']?['image'] ?? result['image'];
 
             if (newProfileImageUrl != null) {
               debugPrint('New profile image URL: $newProfileImageUrl');
 
-              SharedPreferences prefs = await SharedPreferences.getInstance();
-              String? userData = prefs.getString('user');
-
-              if (userData != null) {
-                Map<String, dynamic> user = jsonDecode(userData);
+              final savedUser = await LocalDbService.getLogin();
+              if (savedUser != null) {
+                final user = jsonDecode(savedUser['user_json'] as String);
                 user['image'] = newProfileImageUrl;
-                await prefs.setString('user', jsonEncode(user));
+                await LocalDbService.saveLogin(
+                  email: savedUser['email'] as String,
+                  token: savedUser['token'] as String,
+                  role: savedUser['role'] as String,
+                  userJson: jsonEncode(user),
+                );
 
                 setState(() {
                   _profileImageUrl = newProfileImageUrl;
@@ -416,6 +437,10 @@ class _ProfileState extends State<Profile> {
           SnackBar(
             content: Text('Gagal upload gambar: $e'),
             backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            margin: EdgeInsets.all(16),
+            duration: Duration(seconds: 3),
           ),
         );
       }
@@ -479,7 +504,9 @@ class _ProfileState extends State<Profile> {
             top: 30,
             left: 16,
             child: TextButton(
-              onPressed: _handleLogout,
+              onPressed: () async {
+                await _handleLogout(context);
+              },
               style: TextButton.styleFrom(
                 backgroundColor: Colors.white.withOpacity(0.2),
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -519,24 +546,27 @@ class _ProfileState extends State<Profile> {
                                 ],
                               ),
                               child: ClipOval(
-                                child: _profileImageUrl != null && _profileImageUrl!.isNotEmpty
+                                child: _profileImageUrl != null &&
+                                        _profileImageUrl!.isNotEmpty
                                     ? Image.network(
                                         '$baseUrl/$_profileImageUrl',
                                         fit: BoxFit.cover,
                                         width: 80,
                                         height: 80,
-                                        loadingBuilder: (context, child, loadingProgress) {
+                                        loadingBuilder:
+                                            (context, child, loadingProgress) {
                                           if (loadingProgress == null) return child;
                                           return const Center(
                                             child: CircularProgressIndicator(
                                               strokeWidth: 2,
-                                              valueColor: AlwaysStoppedAnimation<Color>(
-                                                  Color(0xFF130160)),
+                                              valueColor: AlwaysStoppedAnimation<
+                                                  Color>(Color(0xFF130160)),
                                             ),
                                           );
                                         },
                                         errorBuilder: (context, error, stackTrace) {
-                                          debugPrint('Failed to load profile image: $error');
+                                          debugPrint(
+                                              'Failed to load profile image: $error');
                                           return SvgPicture.asset(
                                             'assets/profile.svg',
                                             fit: BoxFit.cover,
@@ -611,18 +641,20 @@ class _ProfileState extends State<Profile> {
                         const SizedBox(height: 16),
                         _buildTextField('NIM', _nimController, 'E1234567890'),
                         const SizedBox(height: 16),
-                        _buildTextField(
-                            'Nama Lengkap', _fullNameController, 'Brandone Louis Smith'),
+                        _buildTextField('Nama Lengkap', _fullNameController,
+                            'Brandone Louis Smith'),
                         const SizedBox(height: 16),
                         _buildDateField(
                             'Tanggal Lahir', _dateOfBirthController, '1990-01-01'),
                         const SizedBox(height: 16),
+                        _buildTextField('Alamat', _alamatController,
+                            'California, United States'),
+                        const SizedBox(height: 16),
                         _buildTextField(
-                            'Alamat', _alamatController, 'California, United States'),
+                            'Email', _emailController, 'Brandonelouis@gmail.com'),
                         const SizedBox(height: 16),
-                        _buildTextField('Email', _emailController, 'Brandonelouis@gmail.com'),
-                        const SizedBox(height: 16),
-                        _buildTextField('No Telp', _noTelpController, '619 3456 7890'),
+                        _buildTextField(
+                            'No Telp', _noTelpController, '619 3456 7890'),
                         const SizedBox(height: 32),
                         SizedBox(
                           width: double.infinity,

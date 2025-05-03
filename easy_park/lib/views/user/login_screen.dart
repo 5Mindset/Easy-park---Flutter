@@ -1,11 +1,13 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:easy_park/services/auth_service.dart'; // Pastikan path-nya benar
+import 'package:easy_park/services/auth_service.dart';
 import 'forgot_screen.dart';
 import 'register_screen.dart';
 import 'package:easy_park/widgets/Bottom_Navigation.dart';
 import 'package:easy_park/widgets/Drawer_Navigation.dart';
+import 'package:easy_park/services/local_db_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -51,8 +53,11 @@ class _LoginScreenState extends State<LoginScreen> {
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
-        backgroundColor: isError ? Colors.red : Colors.green,
+        content: Text(
+          message,
+          style: GoogleFonts.dmSans(fontSize: 16, fontWeight: FontWeight.w500),
+        ),
+        backgroundColor: isError ? Colors.red : const Color(0xFF3D09D9),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         margin: const EdgeInsets.all(16),
@@ -97,62 +102,106 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   // Full form validation and login process
-Future<void> _login() async {
-  // Validate both fields on button press
-  _validateEmail(_emailController.text);
-  _validatePassword(_passwordController.text);
+  Future<void> _login() async {
+    // Validate both fields on button press
+    _validateEmail(_emailController.text);
+    _validatePassword(_passwordController.text);
 
-  // If any field has errors, stop the login process
-  if (_emailHasError || _passwordHasError) {
-    _showSnackBar('Harap perbaiki kesalahan pada form', isError: true);
-    return;
-  }
-
-  // Show loading state
-  setState(() {
-    _isSubmitting = true;
-  });
-
-  try {
-    // Call AuthService.login to perform API login
-    final result = await AuthService.login(
-      _emailController.text,
-      _passwordController.text,
-    );
-
-    if (result['success']) {
-      _showSnackBar(result['message']);
-
-      // Redirect sesuai peran
-      final redirectTo = result['redirect_to'];
-      Widget targetPage;
-
-      if (redirectTo == 'Bottom_Navigation') {
-        targetPage = const BottomNavigationWidget(); // Mahasiswa
-      } else if (redirectTo == 'petugasHome') {
-        targetPage = const DrawerNavigationwidget();// Petugas
-      } else {
-        targetPage = const Scaffold(
-          body: Center(child: Text('Halaman tidak ditemukan')),
-        ); // Fallback
-      }
-
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => targetPage),
-      );
-    } else {
-      _showSnackBar(result['message'], isError: true);
+    // If any field has errors, stop the login process
+    if (_emailHasError || _passwordHasError) {
+      _showSnackBar('Harap perbaiki kesalahan pada form', isError: true);
+      return;
     }
-  } catch (e) {
-    _showSnackBar('Terjadi kesalahan: ${e.toString()}', isError: true);
-  } finally {
-    // Hide loading state
-    setState(() {
-      _isSubmitting = false;
-    });
-  }
-}
 
+    // Show loading state
+    setState(() {
+      _isSubmitting = true;
+    });
+
+    try {
+      // Call AuthService.login to perform API login
+      final result = await AuthService.login(
+        _emailController.text,
+        _passwordController.text,
+      );
+
+      debugPrint('Login result: $result');
+
+      if (result['success']) {
+        // Show API-provided notification
+        _showSnackBar(result['message']);
+
+        // Get redirect_to and role
+        final redirectTo = result['redirect_to'];
+        final role = result['role'];
+        debugPrint('Redirect to: $redirectTo, Role: $role');
+
+        // Validate role
+        if (!['mahasiswa', 'petugas', 'admin'].contains(role)) {
+          _showSnackBar('Role tidak valid: $role', isError: true);
+          setState(() {
+            _isSubmitting = false;
+          });
+          return;
+        }
+
+        // Simpan ke SQLite
+        try {
+          await LocalDbService.saveLogin(
+            email: _emailController.text,
+            token: result['token'],
+            role: role,
+            userJson: jsonEncode(result['user']),
+          );
+          debugPrint('Saved to LocalDbService: email=${_emailController.text}, role=$role');
+        } catch (e) {
+          _showSnackBar('Gagal menyimpan data login: $e', isError: true);
+          setState(() {
+            _isSubmitting = false;
+          });
+          return;
+        }
+
+        // Map redirect_to to navigation target
+        Widget? targetPage;
+        if (redirectTo == 'Bottom_Navigation') {
+          targetPage = const BottomNavigationWidget();
+        } else if (redirectTo == 'petugasHome') {
+          targetPage = const DrawerNavigationwidget();
+        } else if (redirectTo == 'adminHome') {
+          // Handle admin case (no AdminHomeWidget in Flutter)
+          _showSnackBar('Admin dashboard not available in mobile app', isError: true);
+          setState(() {
+            _isSubmitting = false;
+          });
+          return;
+        } else {
+          _showSnackBar('Redirect tidak valid: $redirectTo', isError: true);
+          setState(() {
+            _isSubmitting = false;
+          });
+          return;
+        }
+
+        // Navigate after a delay to ensure snackbar is visible
+        await Future.delayed(const Duration(seconds: 3));
+        if (mounted) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => targetPage!),
+          );
+        }
+      } else {
+        _showSnackBar(result['message'], isError: true);
+      }
+    } catch (e) {
+      _showSnackBar('Terjadi kesalahan: ${e.toString()}', isError: true);
+    } finally {
+      // Hide loading state
+      setState(() {
+        _isSubmitting = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

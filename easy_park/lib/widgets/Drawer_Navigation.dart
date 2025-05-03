@@ -158,20 +158,40 @@ class CustomDrawer extends StatelessWidget {
             ),
             title: const Text('Log out'),
             onTap: () async {
-              Navigator.pop(context); // tutup drawer
-
-              final result = await AuthService.logout();
-
-              if (result['success']) {
-                // Pindah ke LoginScreen dan hapus seluruh history
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (context) => LoginScreen()),
-                  (route) => false,
-                );
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(result['message'] ?? 'Logout gagal')),
-                );
+              Navigator.pop(context); // Close the drawer
+              try {
+                await AuthService.logout();
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Logout berhasil'),
+                      backgroundColor: Colors.green,
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10)),
+                      margin: EdgeInsets.all(16),
+                      duration: Duration(seconds: 3),
+                    ),
+                  );
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (context) => const LoginScreen()),
+                    (route) => false,
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Gagal logout: $e'),
+                      backgroundColor: Colors.red,
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10)),
+                      margin: EdgeInsets.all(16),
+                      duration: Duration(seconds: 3),
+                    ),
+                  );
+                }
               }
             },
           ),

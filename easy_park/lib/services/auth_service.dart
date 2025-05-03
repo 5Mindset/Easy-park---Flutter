@@ -4,7 +4,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:easy_park/constants/api_config.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'local_db_service.dart';
 
 class AuthService {
   static Future<Map<String, dynamic>> register({
@@ -13,7 +13,7 @@ class AuthService {
     required String password,
     required String nim,
     required String fullName,
-    required String dateOfBirth, // format: YYYY-MM-DD
+    required String dateOfBirth,
     required String phoneNumber,
     required String address,
   }) async {
@@ -56,6 +56,7 @@ class AuthService {
         };
       }
     } catch (e) {
+      debugPrint('Error registering: $e');
       return {
         'success': false,
         'message': 'Terjadi kesalahan saat menghubungi server.',
@@ -64,17 +65,13 @@ class AuthService {
     }
   }
 
-  // Fungsi LOGIN
-  static Future<Map<String, dynamic>> login(
-      String email, String password) async {
-    final url = Uri.parse('$apiBaseUrl/login');
-
+  static Future<Map<String, dynamic>> login(String email, String password) async {
     try {
       final response = await http.post(
-        url,
+        Uri.parse('$apiBaseUrl/login'),
         headers: {
-          'Content-Type': 'application/json',
           'Accept': 'application/json',
+          'Content-Type': 'application/json',
         },
         body: jsonEncode({
           'email': email,
@@ -82,88 +79,203 @@ class AuthService {
         }),
       );
 
-      final body = jsonDecode(response.body);
+      debugPrint('API login response: ${response.body}');
+      final result = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
-        // Simpan token ke SharedPreferences
-        SharedPreferences prefs = await SharedPreferences.getInstance();
-        prefs.setString('token', body['access_token']);
-        prefs.setString('user', jsonEncode(body['user']));
+        final user = result['user'];
+        final token = result['access_token'];
+        final redirectTo = result['redirect_to'];
+        final roleId = user['role_id'];
+
+        // Map role_id to role string
+        String role;
+        switch (roleId) {
+          case 1:
+            role = 'admin';
+            break;
+          case 2:
+            role = 'petugas';
+            break;
+          case 3:
+            role = 'mahasiswa';
+            break;
+          default:
+            role = 'unknown';
+        }
 
         return {
           'success': true,
-          'message': body['message'] ?? 'Login berhasil',
-          'token': body['access_token'],
-          'user': body['user'],
-          'redirect_to': body['redirect_to'] ?? '',
+          'message': result['message'] ?? 'Login berhasil',
+          'token': token,
+          'user': user,
+          'role': role,
+          'redirect_to': redirectTo,
         };
       } else {
         return {
           'success': false,
-          'message': body['message'] ?? 'Login gagal',
-          'errors': body['errors'] ?? {},
+          'message': result['message'] ?? 'Login gagal',
         };
       }
     } catch (e) {
       return {
         'success': false,
-        'message': 'Terjadi kesalahan saat menghubungi server.',
-        'error': e.toString(),
+        'message': e.toString(),
       };
     }
   }
 
-  // Fungsi LOGOUT
-  static Future<Map<String, dynamic>> logout() async {
+  static Future<void> logout() async {
     try {
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      await prefs.remove('token');
-      await prefs.remove('user');
-
-      return {
-        'success': true,
-        'message': 'Logout berhasil',
-      };
+      final savedUser = await LocalDbService.getLogin();
+      final token = savedUser?['token'] as String?;
+      if (token != null) {
+        await http.post(
+          Uri.parse('$apiBaseUrl/logout'),
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Accept': 'application/json',
+          },
+        );
+      }
+      await LocalDbService.deleteLogin();
     } catch (e) {
-      return {
-        'success': false,
-        'message': 'Terjadi kesalahan saat logout.',
-        'error': e.toString(),
-      };
+      throw Exception('Logout failed: $e');
     }
   }
 
-  // Fungsi untuk AUTO LOGIN (cek token di SharedPreferences)
   static Future<Map<String, dynamic>> autoLogin() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token');
-    final userJson = prefs.getString('user');
-
-    if (token != null && userJson != null) {
-      final user = jsonDecode(userJson);
-      final roleId = user['role_id'];
-      String redirectTo = '';
-
-      switch (roleId) {
-        case 2:
-          redirectTo = 'petugasHome';
-          break;
-        case 3:
-          redirectTo = 'Bottom_Navigation';
-          break;
-        default:
-          redirectTo = 'home';
+    try {
+      final savedUser = await LocalDbService.getLogin();
+      debugPrint('Saved user from LocalDbService: $savedUser');
+      if (savedUser == null) {
+        return {'success': false, 'message': 'No user data found'};
       }
 
+      final email = savedUser['email'] as String?;
+      final token = savedUser['token'] as String?;
+      final userJson = savedUser['user_json'] as String?;
+      if (email == null || token == null || userJson == null) {
+        await LocalDbService.deleteLogin();
+        return {'success': false, 'message': 'Incomplete user data in LocalDbService'};
+      }
+
+      final storedUser = jsonDecode(userJson);
+      final storedRoleId = storedUser['role_id'];
+
+      // Attempt API call to validate token
+      final response = await http.get(
+        Uri.parse('$apiBaseUrl/user'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+        },
+      ).timeout(const Duration(seconds: 5), onTimeout: () {
+        return http.Response('Request timed out', 504);
+      });
+
+      debugPrint('API user response: ${response.statusCode} - ${response.body}');
+
+      if (response.statusCode == 200) {
+        final result = jsonDecode(response.body);
+        final user = result['user'] ?? result['data']?['user'];
+        if (user == null) {
+          await LocalDbService.deleteLogin();
+          return {'success': false, 'message': 'Invalid user data from API'};
+        }
+
+        final roleId = user['role_id'] ?? storedRoleId;
+        if (roleId == null) {
+          await LocalDbService.deleteLogin();
+          return {'success': false, 'message': 'No role_id found in user data'};
+        }
+
+        String role;
+        String redirectTo;
+        switch (roleId) {
+          case 1:
+            role = 'admin';
+            redirectTo = 'adminHome';
+            break;
+          case 2:
+            role = 'petugas';
+            redirectTo = 'petugasHome';
+            break;
+          case 3:
+            role = 'mahasiswa';
+            redirectTo = 'Bottom_Navigation';
+            break;
+          default:
+            role = 'unknown';
+            redirectTo = 'home';
+        }
+
+        // Update LocalDbService with latest user data
+        await LocalDbService.saveLogin(
+          email: email,
+          token: token,
+          role: role,
+          userJson: jsonEncode(user),
+        );
+        debugPrint('Updated LocalDbService: email=$email, role=$role');
+
+        return {
+          'success': true,
+          'message': 'Auto-login successful',
+          'token': token,
+          'user': user,
+          'role': role,
+          'redirect_to': redirectTo,
+        };
+      } else {
+        // Fallback to stored user data if API call fails
+        debugPrint('Falling back to stored user data due to API failure');
+        if (storedRoleId != null) {
+          String role;
+          String redirectTo;
+          switch (storedRoleId) {
+            case 1:
+              role = 'admin';
+              redirectTo = 'adminHome';
+              break;
+            case 2:
+              role = 'petugas';
+              redirectTo = 'petugasHome';
+              break;
+            case 3:
+              role = 'mahasiswa';
+              redirectTo = 'Bottom_Navigation';
+              break;
+            default:
+              role = 'unknown';
+              redirectTo = 'home';
+          }
+
+          return {
+            'success': true,
+            'message': 'Auto-login using stored data',
+            'token': token,
+            'user': storedUser,
+            'role': role,
+            'redirect_to': redirectTo,
+          };
+        }
+
+        await LocalDbService.deleteLogin();
+        return {
+          'success': false,
+          'message': 'Invalid or expired token: ${response.statusCode} - ${response.body}',
+        };
+      }
+    } catch (e) {
+      debugPrint('Auto-login error: $e');
+      await LocalDbService.deleteLogin();
       return {
-        'success': true,
-        'redirect_to': redirectTo,
+        'success': false,
+        'message': 'Auto-login failed: $e',
       };
     }
-
-    return {
-      'success': false,
-    };
   }
 
   static Future<Map<String, dynamic>> updateProfile({
@@ -173,14 +285,13 @@ class AuthService {
     String? address,
     String? nim,
     String? fullName,
-    String? dateOfBirth, // format: YYYY-MM-DD
+    String? dateOfBirth,
   }) async {
     final url = Uri.parse('$apiBaseUrl/update-profile');
 
     try {
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      String? token = prefs.getString('token');
-
+      final savedUser = await LocalDbService.getLogin();
+      final token = savedUser?['token'] as String?;
       if (token == null) {
         return {
           'success': false,
@@ -188,13 +299,12 @@ class AuthService {
         };
       }
 
-      Map<String, dynamic> data = {};
+      final data = <String, dynamic>{};
       if (name != null) data['name'] = name;
       if (email != null) data['email'] = email;
       if (phoneNumber != null) data['phone_number'] = phoneNumber;
       if (address != null) data['address'] = address;
       if (nim != null) data['nim'] = nim;
-      if (fullName != null) data['full_name'] = fullName;
       if (dateOfBirth != null) data['date_of_birth'] = dateOfBirth;
 
       final response = await http.put(
@@ -212,7 +322,12 @@ class AuthService {
 
       if (response.statusCode == 200) {
         if (body['user'] != null) {
-          prefs.setString('user', jsonEncode(body['user']));
+          await LocalDbService.saveLogin(
+            email: body['user']['email'] ?? savedUser?['email'] ?? '',
+            token: token,
+            role: savedUser?['role'] ?? 'mahasiswa',
+            userJson: jsonEncode(body['user']),
+          );
         }
 
         return {
@@ -237,13 +352,11 @@ class AuthService {
     }
   }
 
-  // Fungsi UPLOAD IMAGE - ENHANCED
   static Future<Map<String, dynamic>> uploadProfileImage(File imageFile) async {
     debugPrint('Starting profile image upload...');
     final url = Uri.parse('$apiBaseUrl/upload-profile-image');
 
     try {
-      // Check if file exists and is valid
       if (!await imageFile.exists()) {
         debugPrint('File does not exist at path: ${imageFile.path}');
         return {
@@ -252,12 +365,17 @@ class AuthService {
         };
       }
 
-      int fileSize = await imageFile.length();
-      debugPrint('File size: ${fileSize / 1024} KB');
+      final fileSize = await imageFile.length();
+      if (fileSize > 5 * 1024 * 1024) {
+        debugPrint('File too large: ${fileSize / 1024} KB');
+        return {
+          'success': false,
+          'message': 'Ukuran file terlalu besar (maksimum 5MB).',
+        };
+      }
 
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      String? token = prefs.getString('token');
-
+      final savedUser = await LocalDbService.getLogin();
+      final token = savedUser?['token'] as String?;
       if (token == null) {
         debugPrint('Token not found');
         return {
@@ -266,25 +384,22 @@ class AuthService {
         };
       }
 
-      debugPrint('Creating multipart request to $url');
-      var request = http.MultipartRequest('POST', url)
+      final request = http.MultipartRequest('POST', url)
         ..headers.addAll({
           'Authorization': 'Bearer $token',
           'Accept': 'application/json',
-        });
-
-      // Add the file to the request
-      request.files.add(
-        await http.MultipartFile.fromPath(
-          'image', // This field name should match what your API expects
-          imageFile.path,
-          filename: basename(imageFile.path),
-        ),
-      );
+        })
+        ..files.add(
+          await http.MultipartFile.fromPath(
+            'image',
+            imageFile.path,
+            filename: basename(imageFile.path),
+          ),
+        );
 
       debugPrint('Sending request...');
-      var streamedResponse = await request.send();
-      var responseBody = await streamedResponse.stream.bytesToString();
+      final streamedResponse = await request.send();
+      final responseBody = await streamedResponse.stream.bytesToString();
 
       debugPrint('Response status: ${streamedResponse.statusCode}');
       debugPrint('Response body: $responseBody');
@@ -293,16 +408,12 @@ class AuthService {
 
       if (streamedResponse.statusCode == 200 ||
           streamedResponse.statusCode == 201) {
-        // Extract profile photo URL, handling different possible response formats
         String? profilePhotoUrl;
-
-        // Check different possible locations for the profile photo URL
-        if (body['user'] != null && body['user']['profile_photo_url'] != null) {
+        if (body['user']?['profile_photo_url'] != null) {
           profilePhotoUrl = body['user']['profile_photo_url'];
         } else if (body['profile_photo_url'] != null) {
           profilePhotoUrl = body['profile_photo_url'];
-        } else if (body['data'] != null &&
-            body['data']['profile_photo_url'] != null) {
+        } else if (body['data']?['profile_photo_url'] != null) {
           profilePhotoUrl = body['data']['profile_photo_url'];
         } else if (body['url'] != null) {
           profilePhotoUrl = body['url'];
@@ -310,18 +421,24 @@ class AuthService {
 
         debugPrint('Extracted profile photo URL: $profilePhotoUrl');
 
-        // Update user data in SharedPreferences with new image URL
         if (body['user'] != null) {
-          await prefs.setString('user', jsonEncode(body['user']));
-          debugPrint('Updated user data in SharedPreferences');
+          await LocalDbService.saveLogin(
+            email: body['user']['email'] ?? savedUser?['email'] ?? '',
+            token: token,
+            role: savedUser?['role'] ?? 'mahasiswa',
+            userJson: jsonEncode(body['user']),
+          );
         } else if (profilePhotoUrl != null) {
-          // If user object not in response but we have the URL, update it manually
-          String? userData = prefs.getString('user');
-          if (userData != null) {
-            Map<String, dynamic> user = jsonDecode(userData);
+          final currentUserJson = savedUser?['user_json'] as String?;
+          if (currentUserJson != null) {
+            final user = jsonDecode(currentUserJson);
             user['profile_photo_url'] = profilePhotoUrl;
-            await prefs.setString('user', jsonEncode(user));
-            debugPrint('Manually updated profile_photo_url in user data');
+            await LocalDbService.saveLogin(
+              email: savedUser?['email'] ?? '',
+              token: token,
+              role: savedUser?['role'] ?? 'mahasiswa',
+              userJson: jsonEncode(user),
+            );
           }
         }
 
@@ -343,20 +460,18 @@ class AuthService {
       debugPrint('Error uploading image: $e');
       return {
         'success': false,
-        'message': 'Terjadi kesalahan saat upload gambar: $e',
+        'message': 'Terjadi kesalahan saat upload gambar.',
         'error': e.toString(),
       };
     }
   }
 
-  // Fungsi GET PROFILE
   static Future<Map<String, dynamic>> getProfile() async {
     final url = Uri.parse('$apiBaseUrl/profile');
 
     try {
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      String? token = prefs.getString('token');
-
+      final savedUser = await LocalDbService.getLogin();
+      final token = savedUser?['token'] as String?;
       if (token == null) {
         return {
           'success': false,
@@ -373,13 +488,16 @@ class AuthService {
       );
 
       final body = jsonDecode(response.body);
-
       debugPrint('Get profile response: $body');
 
       if (response.statusCode == 200) {
-        // Update data user di SharedPreferences
         if (body['user'] != null) {
-          prefs.setString('user', jsonEncode(body['user']));
+          await LocalDbService.saveLogin(
+            email: body['user']['email'] ?? savedUser?['email'] ?? '',
+            token: token,
+            role: savedUser?['role'] ?? 'mahasiswa',
+            userJson: jsonEncode(body['user']),
+          );
         }
 
         return {
@@ -401,6 +519,17 @@ class AuthService {
         'message': 'Terjadi kesalahan saat mengambil profil.',
         'error': e.toString(),
       };
+    }
+  }
+
+  static String _mapRoleToRedirect(String role) {
+    switch (role.toLowerCase()) {
+      case 'mahasiswa':
+        return 'Bottom_Navigation';
+      case 'petugas':
+        return 'petugasHome';
+      default:
+        return 'login';
     }
   }
 }
