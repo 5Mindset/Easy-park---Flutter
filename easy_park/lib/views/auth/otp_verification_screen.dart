@@ -1,50 +1,71 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-
-void main() {
-  runApp(const OtpPassScreen());
-}
-
-class OtpPassScreen extends StatelessWidget {
-  const OtpPassScreen({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        primarySwatch: Colors.deepPurple,
-        fontFamily: 'Poppins',
-      ),
-      home: const OtpScreen(),
-    );
-  }
-}
+import 'package:google_fonts/google_fonts.dart';
+import 'package:easy_park/services/otp_service.dart';
+import 'reset_password_screen.dart';
 
 class OtpScreen extends StatefulWidget {
-  const OtpScreen({Key? key}) : super(key: key);
+  final String email;
+
+  const OtpScreen({Key? key, required this.email}) : super(key: key);
 
   @override
   State<OtpScreen> createState() => _OtpScreenState();
 }
 
 class _OtpScreenState extends State<OtpScreen> {
-  // Controllers for each OTP field
   final List<TextEditingController> _otpControllers = List.generate(
-    5,
+    6,
     (index) => TextEditingController(),
   );
-
-  // Focus nodes for each OTP field
   final List<FocusNode> _focusNodes = List.generate(
-    5,
+    6,
     (index) => FocusNode(),
   );
+  bool _isLoading = false;
+
+  Future<void> _verifyOtp() async {
+    final otp = _otpControllers.map((controller) => controller.text).join();
+    if (otp.length != 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Masukkan 6 digit kode OTP'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    final result = await OtpService.verifyOtp(widget.email, otp);
+
+    setState(() {
+      _isLoading = false;
+    });
+
+    if (result['success']) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => PasswordResetScreen(email: widget.email),
+        ),
+      );
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(result['message']),
+        backgroundColor: result['success'] ? Colors.green : Colors.red,
+      ),
+    );
+  }
 
   @override
   void dispose() {
-    // Dispose controllers and focus nodes
     for (final controller in _otpControllers) {
       controller.dispose();
     }
@@ -59,11 +80,10 @@ class _OtpScreenState extends State<OtpScreen> {
     double screenHeight = MediaQuery.of(context).size.height;
 
     return Scaffold(
-      resizeToAvoidBottomInset: false, // Menonaktifkan auto-resize saat keyboard muncul
+      resizeToAvoidBottomInset: false,
       backgroundColor: Colors.white,
       body: Stack(
         children: [
-          // Main content
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -71,32 +91,24 @@ class _OtpScreenState extends State<OtpScreen> {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   const SizedBox(height: 48),
-                  
-                  // Header
-                  const Text(
+                  Text(
                     'Masukkan kode',
-                    style: TextStyle(
+                    style: GoogleFonts.dmSans(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF1A1A45),
+                      color: const Color(0xFF1A1A45),
                     ),
                   ),
-                  
                   const SizedBox(height: 12),
-                  
-                  // Instruction text
-                  const Text(
+                  Text(
                     'Kode OTP akan di kirimkan melalui Email',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
+                    style: GoogleFonts.dmSans(
                       fontSize: 14,
-                      color: Color(0xFF666666),
+                      color: const Color(0xFF666666),
                     ),
                   ),
-                  
                   const SizedBox(height: 24),
-                  
-                  // SVG icon centered below instruction text
                   Center(
                     child: SvgPicture.asset(
                       'assets/otp.svg',
@@ -104,71 +116,63 @@ class _OtpScreenState extends State<OtpScreen> {
                       height: 160,
                     ),
                   ),
-                  
                   const SizedBox(height: 48),
-                  
-                  // OTP Input Fields - Row of 5 boxes
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: List.generate(
-                      5,
+                      6,
                       (index) => _buildOtpTextField(index),
                     ),
                   ),
-                  
                   const SizedBox(height: 24),
-                  
-                  // Divider below OTP fields
                   Container(
                     height: 1,
                     color: const Color(0xFFEEEEEE),
                   ),
-                  
                   const SizedBox(height: 24),
-                  
-                  // Check OTP Button
                   SizedBox(
                     width: double.infinity,
                     height: 48,
                     child: ElevatedButton(
-                      onPressed: () {},
+                      onPressed: _isLoading ? null : _verifyOtp,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF3D09D9),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
                       ),
-                      child: const Text(
-                        'CEK KODE OTP',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
+                      child: _isLoading
+                          ? const CircularProgressIndicator(color: Colors.white)
+                          : Text(
+                              'CEK KODE OTP',
+                              style: GoogleFonts.dmSans(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
                     ),
                   ),
-                  
                   const SizedBox(height: 16),
-                  
-                  // Back Button
                   SizedBox(
                     width: double.infinity,
                     height: 48,
                     child: OutlinedButton(
-                      onPressed: () {},
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
                       style: OutlinedButton.styleFrom(
                         side: const BorderSide(color: Color(0xFF5E35B1)),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
                       ),
-                      child: const Text(
+                      child: Text(
                         'KEMBALI',
-                        style: TextStyle(
+                        style: GoogleFonts.dmSans(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF5E35B1),
+                          color: const Color(0xFF5E35B1),
                         ),
                       ),
                     ),
@@ -177,17 +181,16 @@ class _OtpScreenState extends State<OtpScreen> {
               ),
             ),
           ),
-          // Mask SVG at the bottom with Container for better control
           Align(
             alignment: Alignment.bottomCenter,
             child: Container(
-              width: double.infinity, // Ensure full width
-              height: screenHeight * 0.20, // Height remains 25% of screen
+              width: double.infinity,
+              height: screenHeight * 0.20,
               child: SvgPicture.asset(
                 'assets/mask.svg',
-                width: double.infinity, // Ensure full width
-                height: screenHeight * 0.20, // Match container height
-                fit: BoxFit.fill, // Fill the entire area without gaps
+                width: double.infinity,
+                height: screenHeight * 0.20,
+                fit: BoxFit.fill,
               ),
             ),
           ),
@@ -210,7 +213,7 @@ class _OtpScreenState extends State<OtpScreen> {
         textAlign: TextAlign.center,
         keyboardType: TextInputType.number,
         maxLength: 1,
-        style: const TextStyle(
+        style: GoogleFonts.dmSans(
           fontSize: 20,
           fontWeight: FontWeight.bold,
         ),
@@ -223,8 +226,7 @@ class _OtpScreenState extends State<OtpScreen> {
           FilteringTextInputFormatter.digitsOnly,
         ],
         onChanged: (value) {
-          // Auto-focus handling
-          if (value.isNotEmpty && index < 4) {
+          if (value.isNotEmpty && index < 5) {
             FocusScope.of(context).requestFocus(_focusNodes[index + 1]);
           }
         },

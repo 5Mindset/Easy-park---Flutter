@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:easy_park/services/auth_service.dart';
-import 'forgot_screen.dart';
+import 'package:easy_park/views/auth/forgot_password_screen.dart';
 import 'register_screen.dart';
 import 'package:easy_park/widgets/Bottom_Navigation.dart';
 import 'package:easy_park/widgets/Drawer_Navigation.dart';
@@ -408,7 +408,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const ForgotScreen(),
+                            builder: (context) => const ForgotPasswordScreen(),
                           ),
                         );
                       },
