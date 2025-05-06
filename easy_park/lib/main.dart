@@ -3,6 +3,7 @@ import 'views/user/login_screen.dart';  // Path diperbarui ke lokasi baru
 import 'widgets/bottom_navigation.dart'; // Adjust the import path if needed
 import 'views/user/register_screen.dart';
 import 'SplashScreen.dart';
+import 'widgets/Drawer_Navigation.dart';
 
 void main() {
   runApp(const MyApp());
@@ -20,7 +21,8 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.blue,
         fontFamily: 'Roboto',
       ),
-      home: const SplashScreen(),
+      // Langsung mengarah ke BottomNavigation
+      home: const BottomNavigationWidget(), // Ganti ke widget BottomNavigation Anda
     );
   }
 }

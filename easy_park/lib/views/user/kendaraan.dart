@@ -30,21 +30,17 @@ class VehicleRegistrationScreen extends StatefulWidget {
 }
 
 class _VehicleRegistrationScreenState extends State<VehicleRegistrationScreen> {
-  final TextEditingController _nameController = TextEditingController();
   final TextEditingController _plateController = TextEditingController();
   final TextEditingController _brandController = TextEditingController();
   final TextEditingController _typeController = TextEditingController();
   final TextEditingController _modelController = TextEditingController();
-  final TextEditingController _colorController = TextEditingController();
 
   @override
   void dispose() {
-    _nameController.dispose();
     _plateController.dispose();
     _brandController.dispose();
     _typeController.dispose();
     _modelController.dispose();
-    _colorController.dispose();
     super.dispose();
   }
 
@@ -59,7 +55,6 @@ class _VehicleRegistrationScreenState extends State<VehicleRegistrationScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 7),
-
               const Text(
                 'Kendaraan',
                 style: TextStyle(
@@ -69,7 +64,6 @@ class _VehicleRegistrationScreenState extends State<VehicleRegistrationScreen> {
                 ),
               ),
               const SizedBox(height: 2),
-
               const Text(
                 'Kami tidak memiliki informasi kendaraan anda silahkan input informasi kendaraan anda',
                 style: TextStyle(
@@ -78,12 +72,10 @@ class _VehicleRegistrationScreenState extends State<VehicleRegistrationScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-
               Expanded(
                 child: SingleChildScrollView(
                   child: Column(
                     children: [
-                      buildTextField('Nama Kendaraan', _nameController, hint: "Scoopy"),
                       buildTextField('No Plat', _plateController, hint: "P3333"),
                       Row(
                         children: [
@@ -95,16 +87,13 @@ class _VehicleRegistrationScreenState extends State<VehicleRegistrationScreen> {
                       Row(
                         children: [
                           Expanded(child: buildTextField('Model', _modelController, hint: "Fashion Blue")),
-                          const SizedBox(width: 16),
-                          Expanded(child: buildTextField('Warna', _colorController, hint: "hitam")),
                         ],
                       ),
                       const SizedBox(height: 5),
-
                       const Align(
                         alignment: Alignment.centerLeft,
                         child: Text(
-                          'Foto stnk',
+                          'Foto STNK',
                           style: TextStyle(fontSize: 14),
                         ),
                       ),
@@ -135,7 +124,6 @@ class _VehicleRegistrationScreenState extends State<VehicleRegistrationScreen> {
                         ),
                       ),
                       const SizedBox(height: 24),
-
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
