@@ -1,8 +1,8 @@
-import 'dart:io';
-import 'package:path/path.dart';
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:path/path.dart' as path;
 import 'package:easy_park/constants/api_config.dart';
 import 'local_db_service.dart';
 
@@ -65,7 +65,8 @@ class AuthService {
     }
   }
 
-  static Future<Map<String, dynamic>> login(String email, String password) async {
+  static Future<Map<String, dynamic>> login(
+      String email, String password) async {
     try {
       final response = await http.post(
         Uri.parse('$apiBaseUrl/login'),
@@ -85,24 +86,9 @@ class AuthService {
       if (response.statusCode == 200) {
         final user = result['user'];
         final token = result['access_token'];
-        final redirectTo = result['redirect_to'];
-        final roleId = user['role_id'];
-
-        // Map role_id to role string
-        String role;
-        switch (roleId) {
-          case 1:
-            role = 'admin';
-            break;
-          case 2:
-            role = 'petugas';
-            break;
-          case 3:
-            role = 'mahasiswa';
-            break;
-          default:
-            role = 'unknown';
-        }
+        final role = user['role'];
+        final redirectTo =
+            _mapRoleToRedirect(role); // Map role to redirect route
 
         return {
           'success': true,
@@ -158,11 +144,14 @@ class AuthService {
       final userJson = savedUser['user_json'] as String?;
       if (email == null || token == null || userJson == null) {
         await LocalDbService.deleteLogin();
-        return {'success': false, 'message': 'Incomplete user data in LocalDbService'};
+        return {
+          'success': false,
+          'message': 'Incomplete user data in LocalDbService'
+        };
       }
 
       final storedUser = jsonDecode(userJson);
-      final storedRoleId = storedUser['role_id'];
+      final storedRole = storedUser['role'];
 
       // Attempt API call to validate token
       final response = await http.get(
@@ -175,7 +164,8 @@ class AuthService {
         return http.Response('Request timed out', 504);
       });
 
-      debugPrint('API user response: ${response.statusCode} - ${response.body}');
+      debugPrint(
+          'API user response: ${response.statusCode} - ${response.body}');
 
       if (response.statusCode == 200) {
         final result = jsonDecode(response.body);
@@ -185,29 +175,24 @@ class AuthService {
           return {'success': false, 'message': 'Invalid user data from API'};
         }
 
-        final roleId = user['role_id'] ?? storedRoleId;
-        if (roleId == null) {
+        final role = user['role'] ?? storedRole;
+        if (role == null) {
           await LocalDbService.deleteLogin();
-          return {'success': false, 'message': 'No role_id found in user data'};
+          return {'success': false, 'message': 'No role found in user data'};
         }
 
-        String role;
         String redirectTo;
-        switch (roleId) {
-          case 1:
-            role = 'admin';
+        switch (role) {
+          case 'admin':
             redirectTo = 'adminHome';
             break;
-          case 2:
-            role = 'petugas';
+          case 'petugas':
             redirectTo = 'petugasHome';
             break;
-          case 3:
-            role = 'mahasiswa';
+          case 'mahasiswa':
             redirectTo = 'Bottom_Navigation';
             break;
           default:
-            role = 'unknown';
             redirectTo = 'home';
         }
 
@@ -231,24 +216,19 @@ class AuthService {
       } else {
         // Fallback to stored user data if API call fails
         debugPrint('Falling back to stored user data due to API failure');
-        if (storedRoleId != null) {
-          String role;
+        if (storedRole != null) {
           String redirectTo;
-          switch (storedRoleId) {
-            case 1:
-              role = 'admin';
+          switch (storedRole) {
+            case 'admin':
               redirectTo = 'adminHome';
               break;
-            case 2:
-              role = 'petugas';
+            case 'petugas':
               redirectTo = 'petugasHome';
               break;
-            case 3:
-              role = 'mahasiswa';
+            case 'mahasiswa':
               redirectTo = 'Bottom_Navigation';
               break;
             default:
-              role = 'unknown';
               redirectTo = 'home';
           }
 
@@ -257,7 +237,7 @@ class AuthService {
             'message': 'Auto-login using stored data',
             'token': token,
             'user': storedUser,
-            'role': role,
+            'role': storedRole,
             'redirect_to': redirectTo,
           };
         }
@@ -265,7 +245,8 @@ class AuthService {
         await LocalDbService.deleteLogin();
         return {
           'success': false,
-          'message': 'Invalid or expired token: ${response.statusCode} - ${response.body}',
+          'message':
+              'Invalid or expired token: ${response.statusCode} - ${response.body}',
         };
       }
     } catch (e) {
@@ -284,7 +265,7 @@ class AuthService {
     String? phoneNumber,
     String? address,
     String? nim,
-    String? fullName,
+    String? fullName, // Add fullName parameter
     String? dateOfBirth,
   }) async {
     final url = Uri.parse('$apiBaseUrl/update-profile');
@@ -305,6 +286,7 @@ class AuthService {
       if (phoneNumber != null) data['phone_number'] = phoneNumber;
       if (address != null) data['address'] = address;
       if (nim != null) data['nim'] = nim;
+      if (fullName != null) data['full_name'] = fullName; // Send full_name
       if (dateOfBirth != null) data['date_of_birth'] = dateOfBirth;
 
       final response = await http.put(
@@ -357,23 +339,6 @@ class AuthService {
     final url = Uri.parse('$apiBaseUrl/upload-profile-image');
 
     try {
-      if (!await imageFile.exists()) {
-        debugPrint('File does not exist at path: ${imageFile.path}');
-        return {
-          'success': false,
-          'message': 'File tidak ditemukan.',
-        };
-      }
-
-      final fileSize = await imageFile.length();
-      if (fileSize > 5 * 1024 * 1024) {
-        debugPrint('File too large: ${fileSize / 1024} KB');
-        return {
-          'success': false,
-          'message': 'Ukuran file terlalu besar (maksimum 5MB).',
-        };
-      }
-
       final savedUser = await LocalDbService.getLogin();
       final token = savedUser?['token'] as String?;
       if (token == null) {
@@ -381,6 +346,16 @@ class AuthService {
         return {
           'success': false,
           'message': 'Tidak ada token ditemukan. Silakan login ulang.',
+        };
+      }
+
+      // Check file size (max 5MB)
+      final fileSize = await imageFile.length();
+      if (fileSize > 5 * 1024 * 1024) {
+        debugPrint('File too large: ${fileSize / 1024} KB');
+        return {
+          'success': false,
+          'message': 'Ukuran file terlalu besar (maksimum 5MB).',
         };
       }
 
@@ -393,7 +368,7 @@ class AuthService {
           await http.MultipartFile.fromPath(
             'image',
             imageFile.path,
-            filename: basename(imageFile.path),
+            filename: path.basename(imageFile.path),
           ),
         );
 
@@ -528,6 +503,8 @@ class AuthService {
         return 'Bottom_Navigation';
       case 'petugas':
         return 'petugasHome';
+      case 'admin':
+        return 'adminHome';
       default:
         return 'login';
     }

@@ -1,157 +1,63 @@
 import 'package:flutter/material.dart';
-import 'dart:math';
+import 'kendaraan_Edit.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
-void main() {
-  runApp(const Kendaraan());
-}
-
-class Kendaraan extends StatelessWidget {
-  const Kendaraan({Key? key}) : super(key: key);
+class KendaraanScreen extends StatefulWidget {
+  const KendaraanScreen({Key? key}) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Easy Park',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        fontFamily: 'Roboto',
-      ),
-      home: const VehicleRegistrationScreen(),
-    );
-  }
+  State<KendaraanScreen> createState() => _KendaraanScreenState();
 }
 
-class VehicleRegistrationScreen extends StatefulWidget {
-  const VehicleRegistrationScreen({Key? key}) : super(key: key);
-
-  @override
-  State<VehicleRegistrationScreen> createState() => _VehicleRegistrationScreenState();
-}
-
-class _VehicleRegistrationScreenState extends State<VehicleRegistrationScreen> {
-  final TextEditingController _plateController = TextEditingController();
-  final TextEditingController _brandController = TextEditingController();
-  final TextEditingController _typeController = TextEditingController();
-  final TextEditingController _modelController = TextEditingController();
-
-  @override
-  void dispose() {
-    _plateController.dispose();
-    _brandController.dispose();
-    _typeController.dispose();
-    _modelController.dispose();
-    super.dispose();
-  }
+class _KendaraanScreenState extends State<KendaraanScreen> {
+  final List<Map<String, String>> vehicles = [
+    {
+      'name': 'Iron 883',
+      'id': 'P43536',
+      'brand': 'Harley Davidson',
+      'type': 'Motor',
+    },
+    {
+      'name': 'Vanquish',
+      'id': 'P43537',
+      'brand': 'Aston Martin',
+      'type': 'Mobil',
+    },
+    {
+      'name': 'Phantom',
+      'id': 'P43539',
+      'brand': 'Rolls Royce',
+      'type': 'Mobil',
+    },
+    {
+      'name': 'R8',
+      'id': 'P43538',
+      'brand': 'Audi',
+      'type': 'Mobil',
+    },
+  ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: Colors.grey[100],
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(20.0),
+          padding: const EdgeInsets.all(16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 7),
-              const Text(
-                'Kendaraan',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Color.fromARGB(255, 0, 0, 0),
-                ),
-              ),
-              const SizedBox(height: 2),
-              const Text(
-                'Kami tidak memiliki informasi kendaraan anda silahkan input informasi kendaraan anda',
+              _buildHeader(),
+              const SizedBox(height: 8),
+              Text(
+                'klik PILIH salah satu kendaraan yang dipakai',
                 style: TextStyle(
                   fontSize: 12,
-                  color: Colors.red,
+                  color: Colors.red[400],
                 ),
               ),
               const SizedBox(height: 16),
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Column(
-                    children: [
-                      buildTextField('No Plat', _plateController, hint: "P3333"),
-                      Row(
-                        children: [
-                          Expanded(child: buildTextField('Merk', _brandController, hint: "Honda")),
-                          const SizedBox(width: 16),
-                          Expanded(child: buildTextField('Tipe', _typeController, hint: "sepeda listrik")),
-                        ],
-                      ),
-                      Row(
-                        children: [
-                          Expanded(child: buildTextField('Model', _modelController, hint: "Fashion Blue")),
-                        ],
-                      ),
-                      const SizedBox(height: 5),
-                      const Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          'Foto STNK',
-                          style: TextStyle(fontSize: 14),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Container(
-                        width: double.infinity,
-                        height: 120,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: DashedRect(
-                          color: Colors.grey.shade400,
-                          gap: 5.0,
-                          strokeWidth: 1.2,
-                          child: Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Text(
-                                  'Unggah Gambar',
-                                  style: TextStyle(color: Colors.grey),
-                                ),
-                                const SizedBox(height: 6),
-                                Icon(Icons.arrow_downward, color: Colors.grey.shade600),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: () {
-                            // Aksi konfirmasi
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            foregroundColor: Colors.purple,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              side: const BorderSide(color: Colors.purple),
-                            ),
-                          ),
-                          child: const Text(
-                            'KONFIRMASI',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+              Expanded(child: _buildVehicleList()),
             ],
           ),
         ),
@@ -159,104 +65,210 @@ class _VehicleRegistrationScreenState extends State<VehicleRegistrationScreen> {
     );
   }
 
-  Widget buildTextField(String label, TextEditingController controller, {String? hint}) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: const TextStyle(fontSize: 14)),
-          const SizedBox(height: 8),
-          TextField(
-            controller: controller,
-            decoration: InputDecoration(
-              hintText: hint,
-              filled: true,
-              fillColor: Colors.white,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide.none,
+  Widget _buildHeader() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        const Text(
+          'Kendaraan',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF1A1A4B),
+          ),
+        ),
+        ElevatedButton(
+          onPressed: () async {
+            final result = await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const Kendaraan(),
               ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+            );
+            if (result != null && result is Map<String, String>) {
+              setState(() {
+                vehicles.add(result);
+              });
+            }
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF1A1A4B),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8.0),
+            ),
+          ),
+          child: const Text(
+            'TAMBAH',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildVehicleList() {
+    return ListView.builder(
+      itemCount: vehicles.length,
+      itemBuilder: (context, index) {
+        final vehicle = vehicles[index];
+        return _buildVehicleCard(
+          name: vehicle['name'] ?? '',
+          id: vehicle['id'] ?? '',
+          brand: vehicle['brand'] ?? '',
+          type: vehicle['type'] ?? '',
+          index: index,
+        );
+      },
+    );
+  }
+
+  Widget _buildVehicleCard({
+    required String name,
+    required String id,
+    required String brand,
+    required String type,
+    required int index,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      name,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      type,
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  id,
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  brand,
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () {
+                          debugPrint('Edit vehicle: $name');
+                        },
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: Colors.grey),
+                        ),
+                        child: const Text('EDIT'),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Selected: $name ($id)')),
+                          );
+                        },
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: Colors.grey),
+                        ),
+                        child: const Text('PILIH'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          Positioned(
+            top: 8,
+            right: 8,
+            child: IconButton(
+              icon: _buildTrashSvg(),
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Hapus Kendaraan'),
+                    content: Text('Apakah Anda yakin ingin menghapus $name?'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('BATAL'),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          setState(() {
+                            vehicles.removeAt(index);
+                          });
+                          Navigator.pop(context);
+                        },
+                        child: const Text('HAPUS'),
+                      ),
+                    ],
+                  ),
+                );
+              },
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+              iconSize: 24,
+              splashRadius: 24,
             ),
           ),
         ],
       ),
     );
   }
-}
 
-// DashedRect Widget
-class DashedRect extends StatelessWidget {
-  final Widget child;
-  final Color color;
-  final double strokeWidth;
-  final double gap;
-
-  const DashedRect({
-    Key? key,
-    required this.child,
-    this.color = Colors.black,
-    this.strokeWidth = 1.0,
-    this.gap = 5.0,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return CustomPaint(
-      painter: _DashedRectPainter(color: color, strokeWidth: strokeWidth, gap: gap),
-      child: child,
+  Widget _buildTrashSvg() {
+    return SvgPicture.asset(
+      'assets/trash.svg',
+      width: 25,
+      height: 25,
+      colorFilter: const ColorFilter.mode(
+        Colors.red, // Merah
+        BlendMode.srcIn,
+      ),
     );
   }
-}
-
-class _DashedRectPainter extends CustomPainter {
-  final Color color;
-  final double strokeWidth;
-  final double gap;
-
-  _DashedRectPainter({
-    required this.color,
-    required this.strokeWidth,
-    required this.gap,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..strokeWidth = strokeWidth
-      ..style = PaintingStyle.stroke;
-
-    const dashWidth = 5.0;
-    final space = gap;
-
-    void drawDashedLine(double startX, double startY, double endX, double endY) {
-      final dx = endX - startX;
-      final dy = endY - startY;
-      final distance = sqrt(dx * dx + dy * dy);
-      final dashCount = distance / (dashWidth + space);
-      final dxStep = dx / dashCount;
-      final dyStep = dy / dashCount;
-
-      double x = startX, y = startY;
-      for (int i = 0; i < dashCount; i++) {
-        canvas.drawLine(
-          Offset(x, y),
-          Offset(x + dxStep * 0.5, y + dyStep * 0.5),
-          paint,
-        );
-        x += dxStep;
-        y += dyStep;
-      }
-    }
-
-    drawDashedLine(0, 0, size.width, 0); // Top
-    drawDashedLine(size.width, 0, size.width, size.height); // Right
-    drawDashedLine(size.width, size.height, 0, size.height); // Bottom
-    drawDashedLine(0, size.height, 0, 0); // Left
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

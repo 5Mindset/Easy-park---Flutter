@@ -22,7 +22,7 @@ class _BottomNavigationWidgetState extends State<BottomNavigationWidget> {
 
   final List<Widget> _pages = [
     const Beranda(),
-     Kendaraan(),
+     KendaraanScreen(),
     const QRCode(),
     const Histori(),
     const Profile(),
