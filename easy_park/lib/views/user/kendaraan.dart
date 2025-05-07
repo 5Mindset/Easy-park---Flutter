@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import 'kendaraan_Edit.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'kendaraan.dart'; // Import VehicleRegistrationScreen
+import 'kendaraan_Edit.dart'; // Import KendaraanEdit if needed
+import 'package:easy_park/services/vehicle_service.dart';
 
 class KendaraanScreen extends StatefulWidget {
   const KendaraanScreen({Key? key}) : super(key: key);
@@ -10,32 +12,42 @@ class KendaraanScreen extends StatefulWidget {
 }
 
 class _KendaraanScreenState extends State<KendaraanScreen> {
-  final List<Map<String, String>> vehicles = [
-    {
-      'name': 'Iron 883',
-      'id': 'P43536',
-      'brand': 'Harley Davidson',
-      'type': 'Motor',
-    },
-    {
-      'name': 'Vanquish',
-      'id': 'P43537',
-      'brand': 'Aston Martin',
-      'type': 'Mobil',
-    },
-    {
-      'name': 'Phantom',
-      'id': 'P43539',
-      'brand': 'Rolls Royce',
-      'type': 'Mobil',
-    },
-    {
-      'name': 'R8',
-      'id': 'P43538',
-      'brand': 'Audi',
-      'type': 'Mobil',
-    },
-  ];
+  List<Map<String, String>> vehicles = [];
+  bool isLoading = true;
+  String? errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchVehicles();
+  }
+
+  /// Fetch vehicles from the API using VehicleService
+  Future<void> _fetchVehicles() async {
+    setState(() {
+      isLoading = true;
+      errorMessage = null;
+    });
+
+    final result = await VehicleService.getVehicles();
+    if (result['success']) {
+      final List<dynamic> vehicleData = result['data'];
+      setState(() {
+        vehicles = vehicleData.map((vehicle) => {
+      'name': '${vehicle['model']['name'] ?? ''}',
+      'id': '${vehicle['plate_number'] ?? ''}',
+      'brand': '${vehicle['model']['vehicle_brand']['name'] ?? ''}',
+      'type': '${vehicle['model']['vehicle_type']['name'] ?? ''}',
+    }).toList().cast<Map<String, String>>();
+        isLoading = false;
+      });
+    } else {
+      setState(() {
+        isLoading = false;
+        errorMessage = result['message'];
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -57,7 +69,15 @@ class _KendaraanScreenState extends State<KendaraanScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              Expanded(child: _buildVehicleList()),
+              Expanded(
+                child: isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : errorMessage != null
+                        ? Center(child: Text(errorMessage!))
+                        : vehicles.isEmpty
+                            ? const Center(child: Text('Tidak ada kendaraan'))
+                            : _buildVehicleList(),
+              ),
             ],
           ),
         ),
@@ -82,13 +102,15 @@ class _KendaraanScreenState extends State<KendaraanScreen> {
             final result = await Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => const Kendaraan(),
+                builder: (context) => const VehicleRegistrationScreen(),
               ),
             );
             if (result != null && result is Map<String, String>) {
               setState(() {
                 vehicles.add(result);
               });
+              // Refresh vehicles from API to ensure sync
+              await _fetchVehicles();
             }
           },
           style: ElevatedButton.styleFrom(
@@ -194,6 +216,7 @@ class _KendaraanScreenState extends State<KendaraanScreen> {
                       child: OutlinedButton(
                         onPressed: () {
                           debugPrint('Edit vehicle: $name');
+                          // TODO: Navigate to KendaraanEdit
                         },
                         style: OutlinedButton.styleFrom(
                           side: const BorderSide(color: Colors.grey),
@@ -237,11 +260,17 @@ class _KendaraanScreenState extends State<KendaraanScreen> {
                         child: const Text('BATAL'),
                       ),
                       TextButton(
-                        onPressed: () {
+                        onPressed: () async {
+                          // TODO: Call VehicleService.deleteVehicle
                           setState(() {
                             vehicles.removeAt(index);
                           });
                           Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Kendaraan dihapus')),
+                          );
+                          // Refresh vehicles from API
+                          await _fetchVehicles();
                         },
                         child: const Text('HAPUS'),
                       ),
@@ -266,7 +295,7 @@ class _KendaraanScreenState extends State<KendaraanScreen> {
       width: 25,
       height: 25,
       colorFilter: const ColorFilter.mode(
-        Colors.red, // Merah
+        Colors.red,
         BlendMode.srcIn,
       ),
     );
