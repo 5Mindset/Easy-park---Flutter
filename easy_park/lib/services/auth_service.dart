@@ -87,8 +87,15 @@ class AuthService {
         final user = result['user'];
         final token = result['access_token'];
         final role = user['role'];
-        final redirectTo =
-            _mapRoleToRedirect(role); // Map role to redirect route
+        final redirectTo = _mapRoleToRedirect(role);
+
+        // ✅ Simpan login ke database lokal
+        await LocalDbService.saveLogin(
+          email: user['email'],
+          token: token,
+          role: role,
+          userJson: jsonEncode(user),
+        );
 
         return {
           'success': true,
