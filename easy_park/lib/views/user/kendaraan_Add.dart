@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:easy_park/services/vehicle_service.dart';
 import 'dart:math';
+import 'package:easy_park/widgets/Bottom_Navigation.dart';
 
 class VehicleRegistrationScreen extends StatefulWidget {
   const VehicleRegistrationScreen({Key? key}) : super(key: key);
@@ -28,26 +29,15 @@ class _VehicleRegistrationScreenState extends State<VehicleRegistrationScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchDropdownData();
+    _fetchVehicleTypes();
   }
 
-  Future<void> _fetchDropdownData() async {
+  Future<void> _fetchVehicleTypes() async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
 
-    // Fetch brands
-    final brandResult = await VehicleService.getVehicleBrands();
-    if (!brandResult['success']) {
-      setState(() {
-        _isLoading = false;
-        _errorMessage = brandResult['message'];
-      });
-      return;
-    }
-
-    // Fetch types
     final typeResult = await VehicleService.getVehicleTypes();
     if (!typeResult['success']) {
       setState(() {
@@ -58,26 +48,56 @@ class _VehicleRegistrationScreenState extends State<VehicleRegistrationScreen> {
     }
 
     setState(() {
-      _brands = List<Map<String, dynamic>>.from(brandResult['data']);
       _types = List<Map<String, dynamic>>.from(typeResult['data']);
       _isLoading = false;
     });
   }
 
-  Future<void> _fetchModels() async {
-    if (_selectedBrandId == null || _selectedTypeId == null) {
+  Future<void> _fetchBrandsByType() async {
+    setState(() {
+      _brands = [];
+      _models = [];
+      _selectedBrandId = null;
+      _selectedModelId = null;
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    if (_selectedTypeId == null) {
       setState(() {
-        _models = [];
-        _selectedModelId = null;
+        _isLoading = false;
       });
       return;
     }
 
+    final brandResult = await VehicleService.getVehicleBrandsByType(_selectedTypeId!);
     setState(() {
+      if (brandResult['success']) {
+        _brands = List<Map<String, dynamic>>.from(brandResult['data']);
+      } else {
+        _errorMessage = brandResult['message'];
+        _brands = [];
+      }
+      _isLoading = false;
+    });
+  }
+
+  Future<void> _fetchModelsByBrand() async {
+    setState(() {
+      _models = [];
+      _selectedModelId = null;
       _isLoading = true;
+      _errorMessage = null;
     });
 
-    final modelResult = await VehicleService.getVehicleModels(_selectedBrandId!, _selectedTypeId!);
+    if (_selectedBrandId == null) {
+      setState(() {
+        _isLoading = false;
+      });
+      return;
+    }
+
+    final modelResult = await VehicleService.getVehicleModelsByBrand(_selectedBrandId!);
     setState(() {
       if (modelResult['success']) {
         _models = List<Map<String, dynamic>>.from(modelResult['data']);
@@ -140,44 +160,43 @@ class _VehicleRegistrationScreenState extends State<VehicleRegistrationScreen> {
   }
 
   Future<void> _submitForm() async {
-    if (_plateController.text.isEmpty ||
-        _selectedBrandId == null ||
-        _selectedTypeId == null ||
-        _selectedModelId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Harap isi semua field')),
-      );
-      return;
-    }
-
-    setState(() {
-      _isLoading = true;
-    });
-
-    final result = await VehicleService.addVehicle(
-      plateNumber: _plateController.text,
-      vehicleModelId: _selectedModelId!,
-      stnkImage: _stnkImage,
+  if (_plateController.text.isEmpty || _selectedModelId == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Harap isi semua field wajib')),
     );
-
-    setState(() {
-      _isLoading = false;
-    });
-
-    if (result['success']) {
-      final vehicle = result['data'];
-      Navigator.pop(context, {
-        'name': vehicle['model']['name']?.toString() ?? 'Unknown Model',
-        'id': vehicle['plate_number']?.toString() ?? 'Unknown Plate',
-        'brand': vehicle['model']['vehicle_brand']['name']?.toString() ?? 'Unknown Brand',
-        'type': vehicle['model']['vehicle_type']['name']?.toString() ?? 'Unknown Type',
-      });
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${result['message']}\nDetails: ${result['error']}')),
-      );
-    }
+    return;
   }
+
+  setState(() {
+    _isLoading = true;
+    _errorMessage = null;
+  });
+
+  final result = await VehicleService.addVehicle(
+    plateNumber: _plateController.text,
+    vehicleModelId: _selectedModelId!,
+    stnkImage: _stnkImage,
+  );
+
+  setState(() {
+    _isLoading = false;
+  });
+
+  if (result['success']) {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const BottomNavigationWidget(initialTab: 1),
+      ),
+    );
+  } else {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('${result['message']}\nDetails: ${result['error']}')),
+    );
+  }
+}
+
+
 
   @override
   void dispose() {
@@ -222,44 +241,37 @@ class _VehicleRegistrationScreenState extends State<VehicleRegistrationScreen> {
                             child: Column(
                               children: [
                                 buildTextField('No Plat', _plateController, hint: 'P3333'),
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: buildDropdown(
-                                        'Merk',
-                                        _brands.map((b) => b['name'].toString()).toList(),
-                                        _selectedBrandId != null
-                                            ? _brands.firstWhere((b) => b['id'] == _selectedBrandId)['name']
-                                            : null,
-                                        (value) {
-                                          setState(() {
-                                            _selectedBrandId = _brands.firstWhere((b) => b['name'] == value)['id'];
-                                            _selectedModelId = null;
-                                            _fetchModels();
-                                          });
-                                        },
-                                        hint: 'Pilih Merk',
-                                      ),
-                                    ),
-                                    const SizedBox(width: 16),
-                                    Expanded(
-                                      child: buildDropdown(
-                                        'Tipe',
-                                        _types.map((t) => t['name'].toString()).toList(),
-                                        _selectedTypeId != null
-                                            ? _types.firstWhere((t) => t['id'] == _selectedTypeId)['name']
-                                            : null,
-                                        (value) {
-                                          setState(() {
-                                            _selectedTypeId = _types.firstWhere((t) => t['name'] == value)['id'];
-                                            _selectedModelId = null;
-                                            _fetchModels();
-                                          });
-                                        },
-                                        hint: 'Pilih Tipe',
-                                      ),
-                                    ),
-                                  ],
+                                buildDropdown(
+                                  'Tipe',
+                                  _types.map((t) => t['name'].toString()).toList(),
+                                  _selectedTypeId != null
+                                      ? _types.firstWhere((t) => t['id'] == _selectedTypeId)['name']
+                                      : null,
+                                  (value) {
+                                    setState(() {
+                                      _selectedTypeId = value != null
+                                          ? _types.firstWhere((t) => t['name'] == value)['id']
+                                          : null;
+                                    });
+                                    _fetchBrandsByType();
+                                  },
+                                  hint: 'Pilih Tipe',
+                                ),
+                                buildDropdown(
+                                  'Merk',
+                                  _brands.map((b) => b['name'].toString()).toList(),
+                                  _selectedBrandId != null
+                                      ? _brands.firstWhere((b) => b['id'] == _selectedBrandId)['name']
+                                      : null,
+                                  (value) {
+                                    setState(() {
+                                      _selectedBrandId = value != null
+                                          ? _brands.firstWhere((b) => b['name'] == value)['id']
+                                          : null;
+                                    });
+                                    _fetchModelsByBrand();
+                                  },
+                                  hint: 'Pilih Merk',
                                 ),
                                 buildDropdown(
                                   'Model',
@@ -269,7 +281,9 @@ class _VehicleRegistrationScreenState extends State<VehicleRegistrationScreen> {
                                       : null,
                                   (value) {
                                     setState(() {
-                                      _selectedModelId = _models.firstWhere((m) => m['name'] == value)['id'];
+                                      _selectedModelId = value != null
+                                          ? _models.firstWhere((m) => m['name'] == value)['id']
+                                          : null;
                                     });
                                   },
                                   hint: 'Pilih Model',

@@ -6,27 +6,31 @@ import '../views/user/qrcode.dart';
 import '../views/user/histori.dart';
 import '../views/user/profile.dart';
 
-void main() {
-  runApp(const BottomNavigationWidget());
-}
-
 class BottomNavigationWidget extends StatefulWidget {
-  const BottomNavigationWidget({Key? key}) : super(key: key);
+  final int initialTab;
+
+  const BottomNavigationWidget({Key? key, this.initialTab = 0}) : super(key: key);
 
   @override
   _BottomNavigationWidgetState createState() => _BottomNavigationWidgetState();
 }
 
 class _BottomNavigationWidgetState extends State<BottomNavigationWidget> {
-  int _selectedIndex = 0;
+  late int _selectedIndex;
 
   final List<Widget> _pages = [
     const Beranda(),
-     KendaraanScreen(),
+    KendaraanScreen(),
     const QRCode(),
     const Histori(),
     const Profile(),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedIndex = widget.initialTab;
+  }
 
   void _onItemTapped(int index) {
     setState(() {

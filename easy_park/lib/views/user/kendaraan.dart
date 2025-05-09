@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'kendaraan.dart'; // Import VehicleRegistrationScreen
-import 'kendaraan_Add.dart'; // Import KendaraanEdit if needed
+import 'kendaraan_Add.dart';
 import 'package:easy_park/services/vehicle_service.dart';
 
 class KendaraanScreen extends StatefulWidget {
@@ -12,7 +11,7 @@ class KendaraanScreen extends StatefulWidget {
 }
 
 class _KendaraanScreenState extends State<KendaraanScreen> {
-  List<Map<String, dynamic>> vehicles = []; // Changed to dynamic to store full vehicle data
+  List<Map<String, dynamic>> vehicles = [];
   bool isLoading = true;
   String? errorMessage;
 
@@ -22,7 +21,6 @@ class _KendaraanScreenState extends State<KendaraanScreen> {
     _fetchVehicles();
   }
 
-  /// Fetch vehicles from the API using VehicleService
   Future<void> _fetchVehicles() async {
     setState(() {
       isLoading = true;
@@ -32,22 +30,25 @@ class _KendaraanScreenState extends State<KendaraanScreen> {
     final result = await VehicleService.getVehicles();
     if (result['success']) {
       setState(() {
-        vehicles = List<Map<String, dynamic>>.from(result['data']); // Store full vehicle data
+        vehicles = List<Map<String, dynamic>>.from(result['data']);
         isLoading = false;
       });
     } else {
       setState(() {
         isLoading = false;
         errorMessage = result['message'];
+        debugPrint('Fetch vehicles failed: ${result['message']} - ${result['error']}');
       });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal memuat kendaraan: ${result['message']}')),
+      );
     }
   }
 
-  /// Delete a vehicle and refresh the list
   Future<void> _deleteVehicle(int id, String name) async {
     final result = await VehicleService.deleteVehicle(id);
     if (result['success']) {
-      await _fetchVehicles(); // Refresh the list from API
+      await _fetchVehicles();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Kendaraan $name dihapus')),
       );
@@ -114,8 +115,12 @@ class _KendaraanScreenState extends State<KendaraanScreen> {
                 builder: (context) => const VehicleRegistrationScreen(),
               ),
             );
+            // Refresh vehicle list regardless of result to ensure latest data
+            await _fetchVehicles();
             if (result != null) {
-              await _fetchVehicles(); // Refresh list instead of adding manually
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Kendaraan baru ditambahkan: ${result['plate_number']}')),
+              );
             }
           },
           style: ElevatedButton.styleFrom(
@@ -143,11 +148,11 @@ class _KendaraanScreenState extends State<KendaraanScreen> {
         final vehicle = vehicles[index];
         return _buildVehicleCard(
           name: vehicle['model']['name'] ?? 'Unknown Model',
-          id: vehicle['id'].toString(), // Use numeric ID
+          id: vehicle['id'].toString(),
           plateNumber: vehicle['plate_number'] ?? 'Unknown Plate',
           brand: vehicle['model']['vehicle_brand']['name'] ?? 'Unknown Brand',
           type: vehicle['model']['vehicle_type']['name'] ?? 'Unknown Type',
-          vehicle: vehicle, // Pass full vehicle data
+          vehicle: vehicle,
         );
       },
     );
@@ -159,7 +164,7 @@ class _KendaraanScreenState extends State<KendaraanScreen> {
     required String plateNumber,
     required String brand,
     required String type,
-    required Map<String, dynamic> vehicle, // Full vehicle data
+    required Map<String, dynamic> vehicle,
   }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -223,14 +228,7 @@ class _KendaraanScreenState extends State<KendaraanScreen> {
                       child: OutlinedButton(
                         onPressed: () {
                           debugPrint('Edit vehicle: $name');
-                          // TODO: Navigate to KendaraanEdit with vehicle data
-                          // Example:
-                          // Navigator.push(
-                          //   context,
-                          //   MaterialPageRoute(
-                          //     builder: (context) => KendaraanEdit(vehicle: vehicle),
-                          //   ),
-                          // );
+                          // TODO: Implement edit functionality
                         },
                         style: OutlinedButton.styleFrom(
                           side: const BorderSide(color: Colors.grey),
