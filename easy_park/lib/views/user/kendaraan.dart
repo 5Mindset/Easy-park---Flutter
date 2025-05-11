@@ -1,7 +1,13 @@
+// kendaraan_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'kendaraan_Add.dart';
 import 'package:easy_park/services/vehicle_service.dart';
+import 'qrcode.dart';
+import 'package:easy_park/constants/api_config.dart';
+import 'package:easy_park/services/selected_vehicle.dart';
+import 'package:easy_park/widgets/Bottom_Navigation.dart';
+import 'kendaraan_Edit.dart';
 
 class KendaraanScreen extends StatefulWidget {
   const KendaraanScreen({Key? key}) : super(key: key);
@@ -115,7 +121,6 @@ class _KendaraanScreenState extends State<KendaraanScreen> {
                 builder: (context) => const VehicleRegistrationScreen(),
               ),
             );
-            // Refresh vehicle list regardless of result to ensure latest data
             await _fetchVehicles();
             if (result != null) {
               ScaffoldMessenger.of(context).showSnackBar(
@@ -166,6 +171,9 @@ class _KendaraanScreenState extends State<KendaraanScreen> {
     required String type,
     required Map<String, dynamic> vehicle,
   }) {
+    final qrCodePath = vehicle['qr_code'] ?? '';
+    final qrCodeUrl = qrCodePath.isNotEmpty ? '$baseUrl/storage/$qrCodePath' : '';
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
@@ -226,9 +234,19 @@ class _KendaraanScreenState extends State<KendaraanScreen> {
                   children: [
                     Expanded(
                       child: OutlinedButton(
-                        onPressed: () {
-                          debugPrint('Edit vehicle: $name');
-                          // TODO: Implement edit functionality
+                        onPressed: () async {
+                          final result = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => VehicleEditScreen(vehicle: vehicle),
+                            ),
+                          );
+                          await _fetchVehicles();
+                          if (result != null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Kendaraan diperbarui: ${result['plate_number']}')),
+                            );
+                          }
                         },
                         style: OutlinedButton.styleFrom(
                           side: const BorderSide(color: Colors.grey),
@@ -240,8 +258,15 @@ class _KendaraanScreenState extends State<KendaraanScreen> {
                     Expanded(
                       child: OutlinedButton(
                         onPressed: () {
+                          SelectedVehicle().setSelectedVehicle(qrCodeUrl, vehicle);
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(content: Text('Selected: $name ($plateNumber)')),
+                          );
+                          Navigator.of(context).pushAndRemoveUntil(
+                            MaterialPageRoute(
+                              builder: (context) => BottomNavigationWidget(initialTab: 2),
+                            ),
+                            (route) => false,
                           );
                         },
                         style: OutlinedButton.styleFrom(

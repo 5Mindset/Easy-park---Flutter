@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import '../views/user/beranda.dart';
-import '../views/user/kendaraan.dart';
-import '../views/user/qrcode.dart';
-import '../views/user/histori.dart';
-import '../views/user/profile.dart';
+import 'package:easy_park/views/user/beranda.dart';
+import 'package:easy_park/views/user/kendaraan.dart';
+import 'package:easy_park/views/user/qrcode.dart';
+import 'package:easy_park/views/user/histori.dart';
+import 'package:easy_park/views/user/profile.dart';
+import 'package:easy_park/services/selected_vehicle.dart';
 
 class BottomNavigationWidget extends StatefulWidget {
   final int initialTab;
@@ -18,10 +19,16 @@ class BottomNavigationWidget extends StatefulWidget {
 class _BottomNavigationWidgetState extends State<BottomNavigationWidget> {
   late int _selectedIndex;
 
+  // Use SelectedVehicle to get the current QR code URL
+  Widget _buildQRCodePage() {
+    final qrCodeUrl = SelectedVehicle().qrCodeUrl ?? '';
+    return QRCode(qrCodeUrl: qrCodeUrl);
+  }
+
   final List<Widget> _pages = [
     const Beranda(),
-    KendaraanScreen(),
-    const QRCode(),
+    const KendaraanScreen(),
+    const Placeholder(), // Will be replaced by _buildQRCodePage dynamically
     const Histori(),
     const Profile(),
   ];
@@ -72,7 +79,7 @@ class _BottomNavigationWidgetState extends State<BottomNavigationWidget> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _pages[_selectedIndex],
+      body: _selectedIndex == 2 ? _buildQRCodePage() : _pages[_selectedIndex],
       bottomNavigationBar: Stack(
         alignment: Alignment.bottomCenter,
         children: [

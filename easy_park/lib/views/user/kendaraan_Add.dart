@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:easy_park/services/vehicle_service.dart';
-import 'dart:math';
 import 'package:easy_park/widgets/Bottom_Navigation.dart';
+import 'dart:math';
 
 class VehicleRegistrationScreen extends StatefulWidget {
   const VehicleRegistrationScreen({Key? key}) : super(key: key);
@@ -14,6 +14,7 @@ class VehicleRegistrationScreen extends StatefulWidget {
 
 class _VehicleRegistrationScreenState extends State<VehicleRegistrationScreen> {
   final TextEditingController _plateController = TextEditingController();
+  final TextEditingController _modelController = TextEditingController();
   int? _selectedBrandId;
   int? _selectedTypeId;
   int? _selectedModelId;
@@ -59,6 +60,7 @@ class _VehicleRegistrationScreenState extends State<VehicleRegistrationScreen> {
       _models = [];
       _selectedBrandId = null;
       _selectedModelId = null;
+      _modelController.clear();
       _isLoading = true;
       _errorMessage = null;
     });
@@ -86,6 +88,7 @@ class _VehicleRegistrationScreenState extends State<VehicleRegistrationScreen> {
     setState(() {
       _models = [];
       _selectedModelId = null;
+      _modelController.clear();
       _isLoading = true;
       _errorMessage = null;
     });
@@ -160,47 +163,82 @@ class _VehicleRegistrationScreenState extends State<VehicleRegistrationScreen> {
   }
 
   Future<void> _submitForm() async {
-  if (_plateController.text.isEmpty || _selectedModelId == null) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Harap isi semua field wajib')),
+    if (_plateController.text.isEmpty || _modelController.text.isEmpty || _selectedBrandId == null || _selectedTypeId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Harap isi semua field wajib')),
+      );
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    // Check if the entered model exists in _models
+    final modelName = _modelController.text.trim();
+    final existingModel = _models.firstWhere(
+      (m) => m['name'].toString().toLowerCase() == modelName.toLowerCase(),
+      orElse: () => {},
     );
-    return;
+
+    if (existingModel.isNotEmpty) {
+      // Use existing model ID
+      _selectedModelId = existingModel['id'];
+    } else {
+      // Create new vehicle model
+      final modelResult = await VehicleService.createVehicleModel(
+        name: modelName,
+        vehicleBrandId: _selectedBrandId!,
+        vehicleTypeId: _selectedTypeId!,
+      );
+
+      if (!modelResult['success']) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = modelResult['message'];
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal membuat model: ${modelResult['message']}')),
+        );
+        return;
+      }
+
+      _selectedModelId = modelResult['data']['id'];
+      // Optionally update _models to include the new model
+      setState(() {
+        _models.add(modelResult['data']);
+      });
+    }
+
+    final result = await VehicleService.addVehicle(
+      plateNumber: _plateController.text,
+      vehicleModelId: _selectedModelId!,
+      stnkImage: _stnkImage,
+    );
+
+    setState(() {
+      _isLoading = false;
+    });
+
+    if (result['success']) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const BottomNavigationWidget(initialTab: 1),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${result['message']}\nDetails: ${result['error']}')),
+      );
+    }
   }
-
-  setState(() {
-    _isLoading = true;
-    _errorMessage = null;
-  });
-
-  final result = await VehicleService.addVehicle(
-    plateNumber: _plateController.text,
-    vehicleModelId: _selectedModelId!,
-    stnkImage: _stnkImage,
-  );
-
-  setState(() {
-    _isLoading = false;
-  });
-
-  if (result['success']) {
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const BottomNavigationWidget(initialTab: 1),
-      ),
-    );
-  } else {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('${result['message']}\nDetails: ${result['error']}')),
-    );
-  }
-}
-
-
 
   @override
   void dispose() {
     _plateController.dispose();
+    _modelController.dispose();
     super.dispose();
   }
 
@@ -273,20 +311,11 @@ class _VehicleRegistrationScreenState extends State<VehicleRegistrationScreen> {
                                   },
                                   hint: 'Pilih Merk',
                                 ),
-                                buildDropdown(
+                                buildAutocompleteTextField(
                                   'Model',
-                                  _models.map((m) => m['name'].toString()).toList(),
-                                  _selectedModelId != null
-                                      ? _models.firstWhere((m) => m['id'] == _selectedModelId)['name']
-                                      : null,
-                                  (value) {
-                                    setState(() {
-                                      _selectedModelId = value != null
-                                          ? _models.firstWhere((m) => m['name'] == value)['id']
-                                          : null;
-                                    });
-                                  },
-                                  hint: 'Pilih Model',
+                                  _modelController,
+                                  _models,
+                                  hint: 'Masukkan Model',
                                 ),
                                 const SizedBox(height: 5),
                                 const Align(
@@ -452,6 +481,62 @@ class _VehicleRegistrationScreenState extends State<VehicleRegistrationScreen> {
               ),
               contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget buildAutocompleteTextField(
+      String label, TextEditingController controller, List<Map<String, dynamic>> models, {String? hint}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: const TextStyle(fontSize: 14)),
+          const SizedBox(height: 8),
+          Autocomplete<String>(
+            optionsBuilder: (TextEditingValue textEditingValue) {
+              if (textEditingValue.text.isEmpty) {
+                return const Iterable<String>.empty();
+              }
+              return models.map((m) => m['name'].toString()).where((String option) {
+                return option.toLowerCase().contains(textEditingValue.text.toLowerCase());
+              });
+            },
+            onSelected: (String selection) {
+              controller.text = selection;
+              final selectedModel = models.firstWhere((m) => m['name'] == selection);
+              setState(() {
+                _selectedModelId = selectedModel['id'];
+              });
+            },
+            fieldViewBuilder: (BuildContext context, TextEditingController fieldController, FocusNode focusNode,
+                VoidCallback onFieldSubmitted) {
+              fieldController.text = controller.text;
+              return TextField(
+                controller: fieldController,
+                focusNode: focusNode,
+                decoration: InputDecoration(
+                  hintText: hint,
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                ),
+                onChanged: (value) {
+                  controller.text = value;
+                  // Clear selected model ID if the user types a new value
+                  setState(() {
+                    _selectedModelId = null;
+                  });
+                },
+              );
+            },
           ),
         ],
       ),
