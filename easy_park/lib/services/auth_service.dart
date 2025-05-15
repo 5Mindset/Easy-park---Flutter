@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as path;
 import 'package:easy_park/constants/api_config.dart';
 import 'local_db_service.dart';
+import 'selected_vehicle.dart';
 
 class AuthService {
   static Future<Map<String, dynamic>> register({
@@ -66,7 +67,9 @@ class AuthService {
   }
 
   static Future<Map<String, dynamic>> login(
-      String email, String password) async {
+    String email,
+    String password,
+  ) async {
     try {
       final response = await http.post(
         Uri.parse('$apiBaseUrl/login'),
@@ -88,6 +91,9 @@ class AuthService {
         final token = result['access_token'];
         final role = user['role'];
         final redirectTo = _mapRoleToRedirect(role);
+
+        // ✅ Bersihkan kendaraan terpilih sebelumnya (jika ada)
+        await SelectedVehicle().clearSelectedVehicle();
 
         // ✅ Simpan login ke database lokal
         await LocalDbService.saveLogin(

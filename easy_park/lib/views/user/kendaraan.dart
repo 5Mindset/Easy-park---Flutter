@@ -20,11 +20,16 @@ class _KendaraanScreenState extends State<KendaraanScreen> {
   List<Map<String, dynamic>> vehicles = [];
   bool isLoading = true;
   String? errorMessage;
+  int? selectedVehicleId;
 
   @override
   void initState() {
     super.initState();
     _fetchVehicles();
+    final selected = SelectedVehicle().vehicle;
+    if (selected != null) {
+      selectedVehicleId = selected['id'];
+    }
   }
 
   Future<void> _fetchVehicles() async {
@@ -43,7 +48,8 @@ class _KendaraanScreenState extends State<KendaraanScreen> {
       setState(() {
         isLoading = false;
         errorMessage = result['message'];
-        debugPrint('Fetch vehicles failed: ${result['message']} - ${result['error']}');
+        debugPrint(
+            'Fetch vehicles failed: ${result['message']} - ${result['error']}');
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Gagal memuat kendaraan: ${result['message']}')),
@@ -52,18 +58,28 @@ class _KendaraanScreenState extends State<KendaraanScreen> {
   }
 
   Future<void> _deleteVehicle(int id, String name) async {
-    final result = await VehicleService.deleteVehicle(id);
-    if (result['success']) {
-      await _fetchVehicles();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Kendaraan $name dihapus')),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(result['message'])),
-      );
-    }
+  final selected = SelectedVehicle();
+  final currentSelected = selected.vehicle;
+
+  // Jika kendaraan yang dihapus adalah yang sedang dipilih, bersihkan dari lokal
+  if (currentSelected != null && currentSelected['id'] == id) {
+    await selected.clearSelectedVehicle();
+    print('Selected vehicle cleared because it was deleted.');
   }
+
+  final result = await VehicleService.deleteVehicle(id);
+  if (result['success']) {
+    await _fetchVehicles();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Kendaraan $name dihapus')),
+    );
+  } else {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(result['message'])),
+    );
+  }
+}
+
 
   @override
   Widget build(BuildContext context) {
@@ -89,7 +105,9 @@ class _KendaraanScreenState extends State<KendaraanScreen> {
                 child: isLoading
                     ? const Center(child: CircularProgressIndicator())
                     : errorMessage != null
-                        ? Center(child: Text(errorMessage!, textAlign: TextAlign.center))
+                        ? Center(
+                            child: Text(errorMessage!,
+                                textAlign: TextAlign.center))
                         : vehicles.isEmpty
                             ? const Center(child: Text('Tidak ada kendaraan'))
                             : _buildVehicleList(),
@@ -124,7 +142,9 @@ class _KendaraanScreenState extends State<KendaraanScreen> {
             await _fetchVehicles();
             if (result != null) {
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Kendaraan baru ditambahkan: ${result['plate_number']}')),
+                SnackBar(
+                    content: Text(
+                        'Kendaraan baru ditambahkan: ${result['plate_number']}')),
               );
             }
           },
@@ -172,7 +192,8 @@ class _KendaraanScreenState extends State<KendaraanScreen> {
     required Map<String, dynamic> vehicle,
   }) {
     final qrCodePath = vehicle['qr_code'] ?? '';
-    final qrCodeUrl = qrCodePath.isNotEmpty ? '$baseUrl/storage/$qrCodePath' : '';
+    final qrCodeUrl =
+        qrCodePath.isNotEmpty ? '$baseUrl/storage/$qrCodePath' : '';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -238,13 +259,33 @@ class _KendaraanScreenState extends State<KendaraanScreen> {
                           final result = await Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => VehicleEditScreen(vehicle: vehicle),
+                              builder: (context) =>
+                                  VehicleEditScreen(vehicle: vehicle),
                             ),
                           );
-                          await _fetchVehicles();
+                          await _fetchVehicles(); // Refresh vehicle list
                           if (result != null) {
+                            // Check if the updated vehicle is the currently selected one
+                            final selectedVehicleInstance = SelectedVehicle();
+                            final currentSelectedVehicle =
+                                selectedVehicleInstance.vehicle;
+                            if (currentSelectedVehicle != null &&
+                                currentSelectedVehicle['id'] == result['id']) {
+                              // Update SelectedVehicle with the new vehicle data
+                              final updatedQrCodePath = result['qr_code'] ?? '';
+                              final updatedQrCodeUrl =
+                                  updatedQrCodePath.isNotEmpty
+                                      ? '$baseUrl/storage/$updatedQrCodePath'
+                                      : '';
+                              await selectedVehicleInstance.setSelectedVehicle(
+                                  updatedQrCodeUrl, result);
+                              print(
+                                  'Updated SelectedVehicle: $result'); // Debug print
+                            }
                             ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Kendaraan diperbarui: ${result['plate_number']}')),
+                              SnackBar(
+                                  content: Text(
+                                      'Kendaraan diperbarui: ${result['plate_number']}')),
                             );
                           }
                         },
@@ -257,22 +298,44 @@ class _KendaraanScreenState extends State<KendaraanScreen> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: OutlinedButton(
-                        onPressed: () {
-                          SelectedVehicle().setSelectedVehicle(qrCodeUrl, vehicle);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Selected: $name ($plateNumber)')),
-                          );
-                          Navigator.of(context).pushAndRemoveUntil(
-                            MaterialPageRoute(
-                              builder: (context) => BottomNavigationWidget(initialTab: 2),
-                            ),
-                            (route) => false,
-                          );
-                        },
+                        onPressed: selectedVehicleId == vehicle['id']
+                            ? null
+                            : () {
+                                SelectedVehicle()
+                                    .setSelectedVehicle(qrCodeUrl, vehicle);
+                                setState(() {
+                                  selectedVehicleId = vehicle['id'];
+                                });
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                      content: Text(
+                                          'Selected: $name ($plateNumber)')),
+                                );
+                                Navigator.of(context).pushAndRemoveUntil(
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        BottomNavigationWidget(initialTab: 2),
+                                  ),
+                                  (route) => false,
+                                );
+                              },
                         style: OutlinedButton.styleFrom(
+                          backgroundColor: selectedVehicleId == vehicle['id']
+                              ? Colors.green[100]
+                              : Colors.white,
                           side: const BorderSide(color: Colors.grey),
                         ),
-                        child: const Text('PILIH'),
+                        child: Text(
+                          selectedVehicleId == vehicle['id']
+                              ? 'TERPILIH'
+                              : 'PILIH',
+                          style: TextStyle(
+                            color: selectedVehicleId == vehicle['id']
+                                ? Colors.green[800]
+                                : Colors.black,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                     ),
                   ],
@@ -290,7 +353,8 @@ class _KendaraanScreenState extends State<KendaraanScreen> {
                   context: context,
                   builder: (context) => AlertDialog(
                     title: const Text('Hapus Kendaraan'),
-                    content: Text('Apakah Anda yakin ingin menghapus $name ($plateNumber)?'),
+                    content: Text(
+                        'Apakah Anda yakin ingin menghapus $name ($plateNumber)?'),
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.pop(context),

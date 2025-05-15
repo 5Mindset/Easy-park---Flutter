@@ -35,6 +35,10 @@ class LocalDbService {
     return _db!;
   }
 
+  static Future<void> init() async {
+    await _getDatabase();
+  }
+
   static Future<void> saveLogin({
     required String email,
     required String token,
@@ -42,7 +46,6 @@ class LocalDbService {
     required String userJson,
   }) async {
     final db = await _getDatabase();
-    // Hapus semua data login sebelumnya sebelum menyimpan yang baru
     await db.delete('user_login');
     await db.insert(
       'user_login',
@@ -62,6 +65,10 @@ class LocalDbService {
     return null;
   }
 
+  static Future<Map<String, dynamic>?> getUserData() async {
+    return await getLogin();
+  }
+
   static Future<void> deleteLogin() async {
     final db = await _getDatabase();
     await db.delete('user_login');
@@ -74,3 +81,4 @@ class LocalDbService {
     }
   }
 }
+

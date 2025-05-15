@@ -10,7 +10,8 @@ import 'package:easy_park/services/selected_vehicle.dart';
 class BottomNavigationWidget extends StatefulWidget {
   final int initialTab;
 
-  const BottomNavigationWidget({Key? key, this.initialTab = 0}) : super(key: key);
+  const BottomNavigationWidget({Key? key, this.initialTab = 0})
+      : super(key: key);
 
   @override
   _BottomNavigationWidgetState createState() => _BottomNavigationWidgetState();
@@ -19,11 +20,20 @@ class BottomNavigationWidget extends StatefulWidget {
 class _BottomNavigationWidgetState extends State<BottomNavigationWidget> {
   late int _selectedIndex;
 
-  // Use SelectedVehicle to get the current QR code URL
+  late Future<void> _loadFuture;
+
   Widget _buildQRCodePage() {
-    final qrCodeUrl = SelectedVehicle().qrCodeUrl ?? '';
-    return QRCode(qrCodeUrl: qrCodeUrl);
-  }
+  return FutureBuilder(
+    future: _loadFuture,
+    builder: (context, snapshot) {
+      if (snapshot.connectionState == ConnectionState.waiting) {
+        return const Center(child: CircularProgressIndicator());
+      }
+      return const QRCode(); // ✅ tanpa parameter
+    },
+  );
+}
+
 
   final List<Widget> _pages = [
     const Beranda(),
@@ -37,6 +47,7 @@ class _BottomNavigationWidgetState extends State<BottomNavigationWidget> {
   void initState() {
     super.initState();
     _selectedIndex = widget.initialTab;
+    _loadFuture = SelectedVehicle().loadSelectedVehicle();
   }
 
   void _onItemTapped(int index) {
@@ -94,11 +105,16 @@ class _BottomNavigationWidgetState extends State<BottomNavigationWidget> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Expanded(child: _buildNavItem(0, 'assets/beranda.svg', 'Beranda')),
-                  Expanded(child: _buildNavItem(1, 'assets/kendaraan.svg', 'Kendaraan')),
+                  Expanded(
+                      child: _buildNavItem(0, 'assets/beranda.svg', 'Beranda')),
+                  Expanded(
+                      child: _buildNavItem(
+                          1, 'assets/kendaraan.svg', 'Kendaraan')),
                   const SizedBox(width: 56),
-                  Expanded(child: _buildNavItem(3, 'assets/histori.svg', 'Histori')),
-                  Expanded(child: _buildNavItem(4, 'assets/profile.svg', 'Profile')),
+                  Expanded(
+                      child: _buildNavItem(3, 'assets/histori.svg', 'Histori')),
+                  Expanded(
+                      child: _buildNavItem(4, 'assets/profile.svg', 'Profile')),
                 ],
               ),
             ),
