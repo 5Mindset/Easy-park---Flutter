@@ -1,12 +1,27 @@
 import 'package:flutter/material.dart';
-import 'views/user/login_screen.dart';  // Path diperbarui ke lokasi baru 
-import 'widgets/bottom_navigation.dart'; // Adjust the import path if needed
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+
+import 'views/user/login_screen.dart';
+import 'widgets/bottom_navigation.dart';
 import 'views/user/register_screen.dart';
 import 'SplashScreen.dart';
 import 'widgets/Drawer_Navigation.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Inisialisasi hanya jika di desktop
+  if (!isMobile()) {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+  }
+
   runApp(const MyApp());
+}
+
+// Helper function untuk deteksi platform
+bool isMobile() {
+  return identical(0, 0.0);
 }
 
 class MyApp extends StatelessWidget {
@@ -21,8 +36,7 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.blue,
         fontFamily: 'Roboto',
       ),
-      // Langsung mengarah ke BottomNavigation
-      home: const BottomNavigationWidget(), // Ganti ke widget BottomNavigation Anda
+      home: const LoginScreen(),
     );
   }
 }

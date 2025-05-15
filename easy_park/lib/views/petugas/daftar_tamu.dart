@@ -1,95 +1,145 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 
-// Pindahin ke atas duluan biar dikenali
-class Guest {
-  final String name;
-  final String date;
-  final String time;
-  final String imageUrl;
+class DaftarTamu extends StatefulWidget {
+  const DaftarTamu({Key? key}) : super(key: key);
 
-  Guest({
-    required this.name,
-    required this.date,
-    required this.time,
-    required this.imageUrl,
-  });
+  @override
+  State<DaftarTamu> createState() => _DaftarTamuState();
 }
 
-class DaftarTamu extends StatelessWidget {
-  const DaftarTamu({super.key});
+class _DaftarTamuState extends State<DaftarTamu> {
+  late Future<List<Tamu>> _futureTamuList;
+  String? _token;
+
+  @override
+  void initState() {
+    super.initState();
+    loginAndFetch(); // Login dulu, baru ambil data
+  }
+
+  Future<void> loginAndFetch() async {
+    try {
+      final token = await loginUser();
+      setState(() {
+        _token = token;
+        _futureTamuList = fetchTamuList(token);
+      });
+    } catch (e) {
+      debugPrint('Login error: $e');
+    }
+  }
+
+  // LOGIN ke API
+  Future<String> loginUser() async {
+    final response = await http.post(
+      Uri.parse('http://192.168.1.5:8000/api/login'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'email': 'user@example.com', // GANTI email login
+        'password': 'password123',   // GANTI password login
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data['token']; // Pastikan backend mengembalikan 'token'
+    } else {
+      throw Exception('Login gagal: ${response.body}');
+    }
+  }
+
+  // AMBIL DATA TAMU dengan token
+  Future<List<Tamu>> fetchTamuList(String token) async {
+    final response = await http.get(
+      Uri.parse('http://192.168.1.5:8000/api/guest-vehicles'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Accept': 'application/json',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final List data = jsonDecode(response.body);
+      return data
+          .where((item) => item['status'] == 'parked')
+          .map<Tamu>((json) => Tamu.fromJson(json))
+          .toList();
+    } else {
+      throw Exception('Gagal memuat data tamu');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final List<Guest> guests = [
-      Guest(
-        name: 'Bapak Arifin',
-        date: '21/03/2025',
-        time: '13.00',
-        imageUrl:
-            'https://cdn.pixabay.com/photo/2020/02/21/20/57/car-4872167_1280.jpg',
-      ),
-      Guest(
-        name: 'Bapak Senpai',
-        date: '21/03/2025',
-        time: '13.00',
-        imageUrl:
-            'https://cdn.pixabay.com/photo/2016/11/22/07/09/lamborghini-1845714_1280.jpg',
-      ),
-    ];
-
     return Scaffold(
-      backgroundColor: const Color(0xFAFAFAFA),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: false,
-        title: const Text(
-          'Daftar Tamu',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Color.fromARGB(255, 0, 0, 0)
-          ),
-        ),
-        actions: const [
-          Padding(
-            padding: EdgeInsets.only(right: 16.0),
-            child: Center(
-              child: Text(
-                '7 Januari',
-                style: TextStyle(fontSize: 14, color: Colors.black54),
-              ),
-            ),
-          ),
-        ],
-      ),
+      backgroundColor: const Color(0xFFF9F9F9),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: ListView.builder(
-                  itemCount: (guests.length / 2).ceil(),
-                  itemBuilder: (context, rowIndex) {
-                    final start = rowIndex * 2;
-                    final end = (start + 2).clamp(0, guests.length);
-                    final rowGuests = guests.sublist(start, end);
+              // Header
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Daftar tamu',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.indigo,
+                    ),
+                  ),
+                  ElevatedButton(
+                    onPressed: () {},
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.indigo,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 10,
+                      ),
+                    ),
+                    child: const Text(
+                      'TAMBAH',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
 
-                    return Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: rowGuests
-                          .map((guest) => Expanded(
-                                child: Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: GuestCard(guest: guest),
-                                ),
-                              ))
-                          .toList(),
-                    );
-                  },
-                ),
-              )
+              // List tamu dari API
+              Expanded(
+                child: _token == null
+                    ? const Center(child: CircularProgressIndicator())
+                    : FutureBuilder<List<Tamu>>(
+                        future: _futureTamuList,
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState == ConnectionState.waiting) {
+                            return const Center(child: CircularProgressIndicator());
+                          } else if (snapshot.hasError) {
+                            return Center(child: Text('Error: ${snapshot.error}'));
+                          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                            return const Center(child: Text('Tidak ada tamu yang sedang parkir.'));
+                          }
+
+                          final tamuList = snapshot.data!;
+                          return ListView.builder(
+                            itemCount: tamuList.length,
+                            itemBuilder: (context, index) {
+                              return TamuCard(tamu: tamuList[index]);
+                            },
+                          );
+                        },
+                      ),
+              ),
             ],
           ),
         ),
@@ -98,66 +148,69 @@ class DaftarTamu extends StatelessWidget {
   }
 }
 
-class GuestCard extends StatelessWidget {
-  final Guest guest;
+class Tamu {
+  final String nama;
+  final String kendaraan;
+  final String waktu;
+  final String kode;
 
-  const GuestCard({super.key, required this.guest});
+  Tamu({
+    required this.nama,
+    required this.kendaraan,
+    required this.waktu,
+    required this.kode,
+  });
+
+  factory Tamu.fromJson(Map<String, dynamic> json) {
+    return Tamu(
+      nama: json['owner_name'] ?? '',
+      kendaraan: json['vehicle_model']?['name'] ?? '',
+      waktu: json['entry_time']?.substring(11, 16) ?? '-',
+      kode: json['plate_number'] ?? '',
+    );
+  }
+}
+
+class TamuCard extends StatelessWidget {
+  final Tamu tamu;
+
+  const TamuCard({Key? key, required this.tamu}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 240,
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 6)],
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: const [
+          BoxShadow(color: Colors.black12, blurRadius: 4),
+        ],
       ),
-      child: Column(
+      child: Row(
         children: [
-          ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-            child: Image.network(
-              guest.imageUrl,
-              height: 100,
-              width: double.infinity,
-              fit: BoxFit.cover,
-            ),
+          const CircleAvatar(
+            radius: 20,
+            backgroundColor: Colors.indigo,
           ),
-          Padding(
-            padding: const EdgeInsets.all(12),
+          const SizedBox(width: 16),
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  guest.name,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
+                Text(tamu.nama, style: const TextStyle(fontWeight: FontWeight.bold)),
                 const SizedBox(height: 4),
-                Text(guest.date),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: Text(guest.time),
-                ),
-                const SizedBox(height: 8),
-                Center(
-                  child: OutlinedButton(
-                    onPressed: () {},
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Colors.red),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 24, vertical: 8),
-                    ),
-                    child: const Text(
-                      'KELUAR',
-                      style: TextStyle(color: Colors.red),
-                    ),
-                  ),
-                ),
+                Text('${tamu.kendaraan} · ${tamu.waktu}', style: const TextStyle(fontSize: 12)),
+                const SizedBox(height: 4),
+                Text(tamu.kode, style: const TextStyle(fontSize: 12)),
               ],
             ),
+          ),
+          IconButton(
+            onPressed: () {},
+            icon: const Icon(Icons.logout, color: Colors.indigo),
+            tooltip: 'Keluar',
           ),
         ],
       ),
