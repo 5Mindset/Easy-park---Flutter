@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:easy_park/constants/api_config.dart';
-import 'package:easy_park/services/local_db_service.dart'; // Pastikan import ini ada
+import 'package:easy_park/services/local_db_service.dart';
 
 class DaftarTamu extends StatefulWidget {
   const DaftarTamu({Key? key}) : super(key: key);
@@ -62,6 +62,62 @@ class _DaftarTamuState extends State<DaftarTamu> {
     }
   }
 
+  Future<void> exitTamu(Tamu tamu) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Konfirmasi'),
+        content: Text('Apakah Anda yakin kendaraan dengan plat ${tamu.kode} akan keluar?'),
+        actions: [
+          TextButton(
+            child: const Text('BATAL'),
+            onPressed: () => Navigator.of(context).pop(false),
+          ),
+          TextButton(
+            child: const Text('KELUAR'),
+            onPressed: () => Navigator.of(context).pop(true),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      final response = await http.put(
+        Uri.parse('$apiBaseUrl/guest-vehicles/${tamu.id}/exit'),
+        headers: {
+          'Authorization': 'Bearer $_token',
+          'Accept': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Kendaraan berhasil keluar'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        _loadTokenAndFetchData(); // refresh data
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal keluar: ${response.body}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Terjadi kesalahan: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -85,7 +141,9 @@ class _DaftarTamuState extends State<DaftarTamu> {
                     ),
                   ),
                   ElevatedButton(
-                    onPressed: () {},
+                    onPressed: () {
+                      // aksi tambah bisa diisi nanti
+                    },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.indigo,
                       foregroundColor: Colors.white,
@@ -125,7 +183,10 @@ class _DaftarTamuState extends State<DaftarTamu> {
                           return ListView.builder(
                             itemCount: tamuList.length,
                             itemBuilder: (context, index) {
-                              return TamuCard(tamu: tamuList[index]);
+                              return TamuCard(
+                                tamu: tamuList[index],
+                                onExit: () => exitTamu(tamuList[index]),
+                              );
                             },
                           );
                         },
@@ -140,12 +201,14 @@ class _DaftarTamuState extends State<DaftarTamu> {
 }
 
 class Tamu {
+  final int id;
   final String nama;
   final String kendaraan;
   final String waktu;
   final String kode;
 
   Tamu({
+    required this.id,
     required this.nama,
     required this.kendaraan,
     required this.waktu,
@@ -154,6 +217,7 @@ class Tamu {
 
   factory Tamu.fromJson(Map<String, dynamic> json) {
     return Tamu(
+      id: json['id'],
       nama: json['owner_name'] ?? '',
       kendaraan: json['vehicle_model']?['name'] ?? '',
       waktu: json['entry_time']?.substring(11, 16) ?? '-',
@@ -164,8 +228,13 @@ class Tamu {
 
 class TamuCard extends StatelessWidget {
   final Tamu tamu;
+  final VoidCallback onExit;
 
-  const TamuCard({Key? key, required this.tamu}) : super(key: key);
+  const TamuCard({
+    Key? key,
+    required this.tamu,
+    required this.onExit,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -184,6 +253,7 @@ class TamuCard extends StatelessWidget {
           const CircleAvatar(
             radius: 20,
             backgroundColor: Colors.indigo,
+            child: Icon(Icons.directions_car, color: Colors.white, size: 20),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -199,7 +269,7 @@ class TamuCard extends StatelessWidget {
             ),
           ),
           IconButton(
-            onPressed: () {},
+            onPressed: onExit,
             icon: const Icon(Icons.logout, color: Colors.indigo),
             tooltip: 'Keluar',
           ),
