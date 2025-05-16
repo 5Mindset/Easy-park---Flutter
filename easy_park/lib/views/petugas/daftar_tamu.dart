@@ -1,6 +1,9 @@
 import 'dart:convert';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:easy_park/constants/api_config.dart';
+import 'package:easy_park/services/local_db_service.dart'; // Pastikan import ini ada
 
 class DaftarTamu extends StatefulWidget {
   const DaftarTamu({Key? key}) : super(key: key);
@@ -16,49 +19,37 @@ class _DaftarTamuState extends State<DaftarTamu> {
   @override
   void initState() {
     super.initState();
-    loginAndFetch(); // Login dulu, baru ambil data
+    _loadTokenAndFetchData();
   }
 
-  Future<void> loginAndFetch() async {
+  Future<void> _loadTokenAndFetchData() async {
     try {
-      final token = await loginUser();
-      setState(() {
-        _token = token;
-        _futureTamuList = fetchTamuList(token);
-      });
+      final savedLogin = await LocalDbService.getLogin();
+      final token = savedLogin?['token'];
+
+      if (token != null) {
+        setState(() {
+          _token = token;
+          _futureTamuList = fetchTamuList(token);
+        });
+      } else {
+        debugPrint('Token tidak ditemukan. Pengguna belum login.');
+      }
     } catch (e) {
-      debugPrint('Login error: $e');
+      debugPrint('Gagal mengambil token: $e');
     }
   }
 
-  // LOGIN ke API
-  Future<String> loginUser() async {
-    final response = await http.post(
-      Uri.parse('http://192.168.1.5:8000/api/login'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'email': 'user@example.com', // GANTI email login
-        'password': 'password123',   // GANTI password login
-      }),
-    );
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      return data['token']; // Pastikan backend mengembalikan 'token'
-    } else {
-      throw Exception('Login gagal: ${response.body}');
-    }
-  }
-
-  // AMBIL DATA TAMU dengan token
   Future<List<Tamu>> fetchTamuList(String token) async {
-    final response = await http.get(
-      Uri.parse('http://192.168.1.5:8000/api/guest-vehicles'),
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Accept': 'application/json',
-      },
-    );
+    final response = await http
+        .get(
+          Uri.parse('$apiBaseUrl/guest-vehicles'),
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Accept': 'application/json',
+          },
+        )
+        .timeout(const Duration(seconds: 10));
 
     if (response.statusCode == 200) {
       final List data = jsonDecode(response.body);
@@ -67,7 +58,7 @@ class _DaftarTamuState extends State<DaftarTamu> {
           .map<Tamu>((json) => Tamu.fromJson(json))
           .toList();
     } else {
-      throw Exception('Gagal memuat data tamu');
+      throw Exception('Gagal memuat data tamu: ${response.statusCode}');
     }
   }
 
@@ -115,7 +106,7 @@ class _DaftarTamuState extends State<DaftarTamu> {
               ),
               const SizedBox(height: 20),
 
-              // List tamu dari API
+              // List tamu
               Expanded(
                 child: _token == null
                     ? const Center(child: CircularProgressIndicator())
