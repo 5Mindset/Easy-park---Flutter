@@ -15,15 +15,21 @@ class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   Future<Widget> _getInitialScreen() async {
-    await LocalDbService.init();
-    final userData = await LocalDbService.getUserData();
+  await LocalDbService.init();
+  final userData = await LocalDbService.getUserData();
 
-    if (userData != null && userData['email'] != null) {
-      return const BottomNavigationWidget(); // autologin ke home
+  if (userData != null && userData['email'] != null) {
+    final role = userData['role'];
+    if (role == 'petugas') {
+      return const DrawerNavigationwidget();
     } else {
-      return const LoginScreen(); // belum login
+      return const BottomNavigationWidget();
     }
+  } else {
+    return const LoginScreen();
   }
+}
+
 
   @override
   Widget build(BuildContext context) {
