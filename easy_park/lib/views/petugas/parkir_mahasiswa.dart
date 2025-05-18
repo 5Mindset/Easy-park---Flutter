@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:easy_park/constants/api_config.dart';
+
 
 class ParkirMahasiswa extends StatefulWidget {
   const ParkirMahasiswa({Key? key}) : super(key: key);
@@ -36,7 +38,7 @@ class _ParkirMahasiswaState extends State<ParkirMahasiswa> {
 
       try {
         final response = await http.get(
-          Uri.parse('http://192.168.1.9:8000/api/vehicles/$id'),
+          Uri.parse('$apiBaseUrl/vehicles/$id'),
         );
 
         print('Status code: ${response.statusCode}');
