@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
-import 'dart:io';
+import 'package:http/http.dart' as http;
+import 'package:easy_park/constants/api_config.dart';
+import 'package:easy_park/services/local_db_service.dart';
 
 class ParkirTamu extends StatefulWidget {
   const ParkirTamu({Key? key}) : super(key: key);
@@ -11,16 +13,106 @@ class ParkirTamu extends StatefulWidget {
 
 class _ParkirTamuState extends State<ParkirTamu> {
   final TextEditingController _namaController = TextEditingController();
-  File? _imageFile;
+  final TextEditingController _platController = TextEditingController();
+  int? _selectedTypeId;
+  List<dynamic> _vehicleTypes = [];
+  String? _token;
 
-  Future<void> _pickImage() async {
-    final pickedFile =
-        await ImagePicker().pickImage(source: ImageSource.gallery);
+  @override
+  void initState() {
+    super.initState();
+    _loadTokenAndFetchTypes();
+  }
 
-    if (pickedFile != null) {
+  Future<void> _loadTokenAndFetchTypes() async {
+    final savedLogin = await LocalDbService.getLogin();
+    final token = savedLogin?['token'];
+    if (token != null) {
       setState(() {
-        _imageFile = File(pickedFile.path);
+        _token = token;
       });
+      await _fetchVehicleTypes(token);
+    }
+  }
+
+  Future<void> _fetchVehicleTypes(String token) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$apiBaseUrl/vehicle-types'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+        },
+      );
+      if (response.statusCode == 200) {
+        setState(() {
+          _vehicleTypes = jsonDecode(response.body);
+        });
+      }
+    } catch (e) {
+      debugPrint('Gagal mengambil tipe kendaraan: $e');
+    }
+  }
+
+  Future<void> _submit() async {
+    if (_namaController.text.isEmpty ||
+        _platController.text.isEmpty ||
+        _selectedTypeId == null ||
+        _token == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Lengkapi semua data terlebih dahulu')),
+      );
+      return;
+    }
+
+    try {
+      final response = await http.post(
+        Uri.parse('$apiBaseUrl/guest-vehicles'),
+        headers: {
+          'Authorization': 'Bearer $_token',
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'owner_name': _namaController.text,
+          'plate_number': _platController.text,
+          'vehicle_type_id': _selectedTypeId,
+          'status': 'parked',
+        }),
+      );
+
+      if (response.statusCode == 201) {
+showDialog(
+  context: context,
+  builder: (context) => AlertDialog(
+    title: const Text('Sukses'),
+    content: const Text('Data tamu telah ditambahkan.\nSilakan cek daftar tamu.'),
+    actions: [
+      TextButton(
+        onPressed: () {
+          Navigator.pop(context); // tutup dialog
+          _namaController.clear();
+          _platController.clear();
+          setState(() {
+            _selectedTypeId = null;
+          });
+        },
+        child: const Text('OK'),
+      ),
+    ],
+  ),
+);
+
+      } else {
+        final error = jsonDecode(response.body);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal: ${error['message'] ?? response.body}')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Terjadi kesalahan: $e')),
+      );
     }
   }
 
@@ -28,81 +120,77 @@ class _ParkirTamuState extends State<ParkirTamu> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Kendaraan (tamu)'),
+        title: const Text('Input Kendaraan Tamu'),
       ),
       body: Padding(
-        padding: const EdgeInsets.all(24.0),
+        padding: const EdgeInsets.all(24),
         child: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Gabungan title + subtitle
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: const [
-                  Icon(Icons.info_outline, color: Colors.red, size: 20),
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      "Input kendaraan tamu dengan sesuai dan pasti",
-                      style: TextStyle(color: Colors.red, fontSize: 14),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
               const Text("Nama tamu"),
               const SizedBox(height: 8),
               TextField(
                 controller: _namaController,
                 decoration: InputDecoration(
-                  hintText: "pak masud",
+                  hintText: "contoh: Pak Masud",
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 12),
                 ),
               ),
-              const SizedBox(height: 30),
-              const Text("Foto kendaraan dari depan (plat nomer terlihat)"),
-              const SizedBox(height: 12),
-              GestureDetector(
-                onTap: _pickImage,
-                child: DottedBorderBox(
-                  child: _imageFile == null
-                      ? Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: const [
-                            Icon(Icons.cloud_upload,
-                                size: 40, color: Colors.grey),
-                            SizedBox(height: 10),
-                            Text("Unggah Gambar",
-                                style: TextStyle(color: Colors.grey)),
-                          ],
-                        )
-                      : Image.file(_imageFile!, height: 150),
+              const SizedBox(height: 20),
+
+              const Text("Plat Nomor"),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _platController,
+                decoration: InputDecoration(
+                  hintText: "contoh: B 1234 ABC",
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              const Text("Tipe Kendaraan"),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<int>(
+                value: _selectedTypeId,
+                items: _vehicleTypes.map<DropdownMenuItem<int>>((type) {
+                  return DropdownMenuItem<int>(
+                    value: type['id'],
+                    child: Text(type['name']),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  setState(() {
+                    _selectedTypeId = value;
+                  });
+                },
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
               const SizedBox(height: 40),
+
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
+                  onPressed: _submit,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF130160),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
                   ),
-                  onPressed: () {
-                    // Implement konfirmasi logic
-                  },
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 16.0),
-                    child: Text(
-                      "KONFIRMASI",
-                      style: TextStyle(color: Colors.white),
-                    ),
+                  child: const Text(
+                    "KONFIRMASI",
+                    style: TextStyle(color: Colors.white),
                   ),
                 ),
               )
@@ -110,28 +198,6 @@ class _ParkirTamuState extends State<ParkirTamu> {
           ),
         ),
       ),
-    );
-  }
-}
-
-class DottedBorderBox extends StatelessWidget {
-  final Widget child;
-  const DottedBorderBox({Key? key, required this.child}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 150,
-      width: double.infinity,
-      decoration: BoxDecoration(
-        border: Border.all(
-          color: Colors.grey,
-          style: BorderStyle.solid,
-          width: 1.5,
-        ),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Center(child: child),
     );
   }
 }
