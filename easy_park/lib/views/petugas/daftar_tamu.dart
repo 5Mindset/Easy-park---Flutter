@@ -219,7 +219,7 @@ class Tamu {
     return Tamu(
       id: json['id'],
       nama: json['owner_name'] ?? '',
-      kendaraan: json['vehicle_model']?['name'] ?? '',
+      kendaraan: json['vehicle_type']?['name'] ?? '-', // GANTI DARI vehicle_model
       waktu: json['entry_time']?.substring(11, 16) ?? '-',
       kode: json['plate_number'] ?? '',
     );
