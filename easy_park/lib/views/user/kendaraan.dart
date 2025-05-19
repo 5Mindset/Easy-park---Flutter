@@ -167,21 +167,26 @@ class _KendaraanScreenState extends State<KendaraanScreen> {
   }
 
   Widget _buildVehicleList() {
-    return ListView.builder(
-      itemCount: vehicles.length,
-      itemBuilder: (context, index) {
-        final vehicle = vehicles[index];
-        return _buildVehicleCard(
-          name: vehicle['model']['name'] ?? 'Unknown Model',
-          id: vehicle['id'].toString(),
-          plateNumber: vehicle['plate_number'] ?? 'Unknown Plate',
-          brand: vehicle['model']['vehicle_brand']['name'] ?? 'Unknown Brand',
-          type: vehicle['model']['vehicle_type']['name'] ?? 'Unknown Type',
-          vehicle: vehicle,
-        );
-      },
-    );
-  }
+  return ListView.builder(
+    itemCount: vehicles.length,
+    itemBuilder: (context, index) {
+      final vehicle = vehicles[index];
+      final model = vehicle['model'];
+      final brand = model?['vehicle_brand'];
+      final type = model?['vehicle_brand']?['vehicle_type'];
+
+      return _buildVehicleCard(
+        name: model?['name'] ?? 'Unknown Model',
+        id: vehicle['id'].toString(),
+        plateNumber: vehicle['plate_number'] ?? 'Unknown Plate',
+        brand: brand?['name'] ?? 'Unknown Brand',
+        type: type?['name'] ?? 'Unknown Type',
+        vehicle: vehicle,
+      );
+    },
+  );
+}
+
 
   Widget _buildVehicleCard({
     required String name,
