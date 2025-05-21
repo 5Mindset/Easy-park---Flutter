@@ -3,7 +3,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:easy_park/constants/api_config.dart';
-
+import 'package:easy_park/services/parking_service.dart';
 
 class ParkirMahasiswa extends StatefulWidget {
   const ParkirMahasiswa({Key? key}) : super(key: key);
@@ -47,12 +47,24 @@ class _ParkirMahasiswaState extends State<ParkirMahasiswa> {
         if (response.statusCode == 200) {
           final data = jsonDecode(response.body);
 
-          _showVehicleInfoDialog(
-            type: data['model']?['vehicle_type']?['name'] ?? '-',
-            brand: data['model']?['vehicle_brand']?['name'] ?? '-',
-            plate: data['plate_number'] ?? '-',
-            model: data['model']?['name'] ?? '-',
-          );
+          // Cek apakah kendaraan sedang parkir
+          final parkingRecord = data['latest_parking_record'];
+          final isParked =
+              parkingRecord != null && parkingRecord['exit_time'] == null;
+
+          if (isParked) {
+            _showExitConfirmationDialog(
+              parkingRecordId: parkingRecord['id'],
+              plate: data['plate_number'] ?? '-',
+            );
+          } else {
+            _showVehicleInfoDialog(
+              type: data['model']?['vehicle_type']?['name'] ?? '-',
+              brand: data['model']?['vehicle_brand']?['name'] ?? '-',
+              plate: data['plate_number'] ?? '-',
+              model: data['model']?['name'] ?? '-',
+            );
+          }
         } else {
           _showErrorDialog(
               'Gagal mengambil data kendaraan. Status: ${response.statusCode}');
@@ -73,6 +85,55 @@ class _ParkirMahasiswaState extends State<ParkirMahasiswa> {
           TextButton(
             child: const Text('OK'),
             onPressed: () => Navigator.of(context).pop(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showSuccessDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Sukses'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            child: const Text('OK'),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showExitConfirmationDialog({
+    required int parkingRecordId,
+    required String plate,
+  }) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Konfirmasi Keluar'),
+        content: Text('Kendaraan dengan plat $plate akan keluar parkir?'),
+        actions: [
+          TextButton(
+            child: const Text('BATAL'),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          ElevatedButton(
+            child: const Text('KELUAR'),
+            onPressed: () async {
+              Navigator.of(context).pop(); // Tutup dialog
+              final success = await ParkingService().keluarParkirKendaraan(
+                parkingRecordId: parkingRecordId,
+              );
+              if (success) {
+                _showSuccessDialog('Kendaraan berhasil keluar parkir.');
+              } else {
+                _showErrorDialog('Gagal keluar parkir. Coba lagi.');
+              }
+            },
           ),
         ],
       ),
@@ -106,9 +167,20 @@ class _ParkirMahasiswaState extends State<ParkirMahasiswa> {
           ),
           ElevatedButton(
             child: const Text('TERIMA'),
-            onPressed: () {
-              // TODO: Lanjutkan proses
-              Navigator.of(context).pop();
+            onPressed: () async {
+              Navigator.of(context).pop(); // Tutup dialog
+
+              final result = await ParkingService().scanParkirKendaraan(
+                vehicleId: int.parse(scannedCode!.split('/').last),
+              );
+
+              if (result != null && result['message'] != null) {
+                _showSuccessDialog(result['message']);
+              } else {
+                _showErrorDialog(
+                  'Gagal memproses parkir. Periksa koneksi atau coba lagi.',
+                );
+              }
             },
           ),
         ],
