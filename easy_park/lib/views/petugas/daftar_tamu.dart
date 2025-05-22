@@ -13,8 +13,11 @@ class DaftarTamu extends StatefulWidget {
 }
 
 class _DaftarTamuState extends State<DaftarTamu> {
-  late Future<List<Tamu>> _futureTamuList;
   String? _token;
+  List<Tamu> tamuList = [];
+  List<Tamu> filteredList = [];
+  bool isLoading = true;
+  String searchQuery = '';
 
   @override
   void initState() {
@@ -30,8 +33,8 @@ class _DaftarTamuState extends State<DaftarTamu> {
       if (token != null) {
         setState(() {
           _token = token;
-          _futureTamuList = fetchTamuList(token);
         });
+        await fetchTamuList(token);
       } else {
         debugPrint('Token tidak ditemukan. Pengguna belum login.');
       }
@@ -40,26 +43,46 @@ class _DaftarTamuState extends State<DaftarTamu> {
     }
   }
 
-  Future<List<Tamu>> fetchTamuList(String token) async {
-    final response = await http
-        .get(
-          Uri.parse('$apiBaseUrl/guest-vehicles'),
-          headers: {
-            'Authorization': 'Bearer $token',
-            'Accept': 'application/json',
-          },
-        )
-        .timeout(const Duration(seconds: 10));
+  Future<void> fetchTamuList(String token) async {
+    try {
+      final response = await http
+          .get(
+            Uri.parse('$apiBaseUrl/guest-vehicles'),
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Accept': 'application/json',
+            },
+          )
+          .timeout(const Duration(seconds: 10));
 
-    if (response.statusCode == 200) {
-      final List data = jsonDecode(response.body);
-      return data
-          .where((item) => item['status'] == 'parked')
-          .map<Tamu>((json) => Tamu.fromJson(json))
-          .toList();
-    } else {
-      throw Exception('Gagal memuat data tamu: ${response.statusCode}');
+      if (response.statusCode == 200) {
+        final List data = jsonDecode(response.body);
+        final all = data
+            .where((item) => item['status'] == 'parked')
+            .map<Tamu>((json) => Tamu.fromJson(json))
+            .toList();
+
+        setState(() {
+          tamuList = all;
+          filteredList = all;
+          isLoading = false;
+        });
+      } else {
+        throw Exception('Gagal memuat data tamu: ${response.statusCode}');
+      }
+    } catch (e) {
+      setState(() => isLoading = false);
+      debugPrint('Error fetching tamu list: $e');
     }
+  }
+
+  void _filterSearch(String query) {
+    setState(() {
+      searchQuery = query.toLowerCase();
+      filteredList = tamuList
+          .where((tamu) => tamu.nama.toLowerCase().contains(searchQuery))
+          .toList();
+    });
   }
 
   Future<void> exitTamu(Tamu tamu) async {
@@ -128,69 +151,44 @@ class _DaftarTamuState extends State<DaftarTamu> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Daftar tamu',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.indigo,
-                    ),
-                  ),
-                  ElevatedButton(
-                    onPressed: () {
-                      // aksi tambah bisa diisi nanti
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.indigo,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 10,
-                      ),
-                    ),
-                    child: const Text(
-                      'TAMBAH',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ],
+              const Text(
+                'Daftar tamu',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.indigo,
+                ),
               ),
-              const SizedBox(height: 20),
-
-              // List tamu
+              const SizedBox(height: 16),
+              TextField(
+                onChanged: _filterSearch,
+                decoration: InputDecoration(
+                  hintText: 'Cari nama...',
+                  prefixIcon: const Icon(Icons.search),
+                  filled: true,
+                  fillColor: Colors.white,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(20),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
               Expanded(
-                child: _token == null
+                child: isLoading
                     ? const Center(child: CircularProgressIndicator())
-                    : FutureBuilder<List<Tamu>>(
-                        future: _futureTamuList,
-                        builder: (context, snapshot) {
-                          if (snapshot.connectionState == ConnectionState.waiting) {
-                            return const Center(child: CircularProgressIndicator());
-                          } else if (snapshot.hasError) {
-                            return Center(child: Text('Error: ${snapshot.error}'));
-                          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                            return const Center(child: Text('Tidak ada tamu yang sedang parkir.'));
-                          }
-
-                          final tamuList = snapshot.data!;
-                          return ListView.builder(
-                            itemCount: tamuList.length,
+                    : filteredList.isEmpty
+                        ? const Center(child: Text('Tidak ada tamu yang sedang parkir.'))
+                        : ListView.builder(
+                            itemCount: filteredList.length,
                             itemBuilder: (context, index) {
                               return TamuCard(
-                                tamu: tamuList[index],
-                                onExit: () => exitTamu(tamuList[index]),
+                                tamu: filteredList[index],
+                                onExit: () => exitTamu(filteredList[index]),
                               );
                             },
-                          );
-                        },
-                      ),
+                          ),
               ),
             ],
           ),
@@ -219,7 +217,7 @@ class Tamu {
     return Tamu(
       id: json['id'],
       nama: json['owner_name'] ?? '',
-      kendaraan: json['vehicle_type']?['name'] ?? '-', // GANTI DARI vehicle_model
+      kendaraan: json['vehicle_type']?['name'] ?? '-',
       waktu: json['entry_time']?.substring(11, 16) ?? '-',
       kode: json['plate_number'] ?? '',
     );
@@ -244,9 +242,7 @@ class TamuCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: const [
-          BoxShadow(color: Colors.black12, blurRadius: 4),
-        ],
+        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4)],
       ),
       child: Row(
         children: [

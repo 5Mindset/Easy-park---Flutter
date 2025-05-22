@@ -4,7 +4,6 @@ import 'package:http/http.dart' as http;
 import 'dart:async';
 import 'package:easy_park/constants/api_config.dart';
 import 'package:easy_park/services/local_db_service.dart';
-
 class DaftarMahasiswa extends StatefulWidget {
   const DaftarMahasiswa({Key? key}) : super(key: key);
 
@@ -16,6 +15,8 @@ class _DaftarMahasiswaState extends State<DaftarMahasiswa> {
   bool isLoading = true;
   String? _token;
   List<ParkirAktif> parkirList = [];
+  List<ParkirAktif> filteredList = [];
+  String searchQuery = '';
 
   @override
   void initState() {
@@ -33,8 +34,6 @@ class _DaftarMahasiswaState extends State<DaftarMahasiswa> {
           _token = token;
         });
         await fetchParkirList(token);
-      } else {
-        debugPrint('Token tidak ditemukan. Pengguna belum login.');
       }
     } catch (e) {
       debugPrint('Gagal mengambil token: $e');
@@ -51,23 +50,29 @@ class _DaftarMahasiswaState extends State<DaftarMahasiswa> {
         },
       ).timeout(const Duration(seconds: 10));
 
-      debugPrint('Response body: ${response.body}');
-
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
 
         setState(() {
           parkirList = data.map((item) => ParkirAktif.fromJson(item)).toList();
+          filteredList = parkirList;
           isLoading = false;
         });
       } else {
-        debugPrint('Gagal memuat data parkir: ${response.statusCode}');
         setState(() => isLoading = false);
       }
     } catch (e) {
-      debugPrint('Error mengambil data: $e');
       setState(() => isLoading = false);
     }
+  }
+
+  void _filterSearch(String query) {
+    setState(() {
+      searchQuery = query.toLowerCase();
+      filteredList = parkirList.where((item) {
+        return item.ownerName.toLowerCase().contains(searchQuery);
+      }).toList();
+    });
   }
 
   @override
@@ -80,30 +85,39 @@ class _DaftarMahasiswaState extends State<DaftarMahasiswa> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: const [
-                  Text(
-                    'Kendaraan Sedang Parkir',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.indigo,
-                    ),
-                  ),
-                  SizedBox(width: 8),
-                  Icon(Icons.local_parking, color: Colors.black, size: 20),
-                ],
+              const Text(
+                'Daftar mahasiswa',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1A1248),
+                ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
+              TextField(
+                onChanged: _filterSearch,
+                decoration: InputDecoration(
+                  hintText: 'Cari nama...',
+                  prefixIcon: const Icon(Icons.search),
+                  filled: true,
+                  fillColor: Colors.white,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(20),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
               Expanded(
                 child: isLoading
                     ? const Center(child: CircularProgressIndicator())
-                    : parkirList.isEmpty
+                    : filteredList.isEmpty
                         ? const Center(child: Text('Tidak ada kendaraan yang sedang parkir.'))
                         : ListView.builder(
-                            itemCount: parkirList.length,
+                            itemCount: filteredList.length,
                             itemBuilder: (context, index) {
-                              return ParkirAktifCard(parkir: parkirList[index]);
+                              return ParkirAktifCard(parkir: filteredList[index]);
                             },
                           ),
               ),
@@ -119,13 +133,11 @@ class ParkirAktif {
   final String plateNumber;
   final String ownerName;
   final String entryTime;
-  final String status;
 
   ParkirAktif({
     required this.plateNumber,
     required this.ownerName,
     required this.entryTime,
-    required this.status,
   });
 
   factory ParkirAktif.fromJson(Map<String, dynamic> json) {
@@ -133,7 +145,6 @@ class ParkirAktif {
       plateNumber: json['plate_number'] ?? '-',
       ownerName: json['owner_name'] ?? '-',
       entryTime: json['entry_time'] ?? '-',
-      status: json['status'] ?? '-',
     );
   }
 }
@@ -145,8 +156,12 @@ class ParkirAktifCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final timeParts = parkir.entryTime.split(' ');
+    final date = timeParts.length > 0 ? timeParts[0] : '-';
+    final time = timeParts.length > 1 ? timeParts[1] : '-';
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -155,22 +170,23 @@ class ParkirAktifCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.directions_car, color: Colors.indigo, size: 40),
+          const CircleAvatar(
+            radius: 20,
+            backgroundColor: Color(0xFF1A1248),
+          ),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  parkir.plateNumber,
+                  parkir.ownerName,
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 4),
-                Text('Pemilik: ${parkir.ownerName}'),
+                Text('$date . $time'),
                 const SizedBox(height: 4),
-                Text('Masuk: ${parkir.entryTime}'),
-                const SizedBox(height: 4),
-                Text('Status: ${parkir.status}'),
+                Text(parkir.plateNumber),
               ],
             ),
           ),
