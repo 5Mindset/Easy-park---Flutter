@@ -14,14 +14,18 @@ class ParkirMahasiswa extends StatefulWidget {
 
 class _ParkirMahasiswaState extends State<ParkirMahasiswa> {
   String? scannedCode;
+  bool _isProcessing = false; // Prevent multiple scans
 
   void _onDetect(BarcodeCapture capture) async {
+    if (_isProcessing) return; // Prevent multiple scans
+    
     final List<Barcode> barcodes = capture.barcodes;
     final String? code = barcodes.isNotEmpty ? barcodes.first.rawValue : null;
 
     if (code != null && code != scannedCode) {
       setState(() {
         scannedCode = code;
+        _isProcessing = true;
       });
 
       // Tampilkan hasil scan di console
@@ -31,6 +35,7 @@ class _ParkirMahasiswaState extends State<ParkirMahasiswa> {
       final uri = Uri.tryParse(code);
       if (uri == null || uri.pathSegments.isEmpty) {
         _showErrorDialog('Format URL tidak valid.');
+        _resetProcessing();
         return;
       }
 
@@ -54,11 +59,12 @@ class _ParkirMahasiswaState extends State<ParkirMahasiswa> {
 
           if (isParked) {
             _showExitConfirmationDialog(
-              parkingRecordId: parkingRecord['id'],
+              vehicleId: int.parse(id),
               plate: data['plate_number'] ?? '-',
             );
           } else {
             _showVehicleInfoDialog(
+              vehicleId: int.parse(id),
               type: data['model']?['vehicle_type']?['name'] ?? '-',
               brand: data['model']?['vehicle_brand']?['name'] ?? '-',
               plate: data['plate_number'] ?? '-',
@@ -75,6 +81,16 @@ class _ParkirMahasiswaState extends State<ParkirMahasiswa> {
     }
   }
 
+  void _resetProcessing() {
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) {
+        setState(() {
+          _isProcessing = false;
+        });
+      }
+    });
+  }
+
   void _showErrorDialog(String message) {
     showDialog(
       context: context,
@@ -84,7 +100,10 @@ class _ParkirMahasiswaState extends State<ParkirMahasiswa> {
         actions: [
           TextButton(
             child: const Text('OK'),
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () {
+              Navigator.of(context).pop();
+              _resetProcessing();
+            },
           ),
         ],
       ),
@@ -100,7 +119,10 @@ class _ParkirMahasiswaState extends State<ParkirMahasiswa> {
         actions: [
           TextButton(
             child: const Text('OK'),
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () {
+              Navigator.of(context).pop();
+              _resetProcessing();
+            },
           ),
         ],
       ),
@@ -108,7 +130,7 @@ class _ParkirMahasiswaState extends State<ParkirMahasiswa> {
   }
 
   void _showExitConfirmationDialog({
-    required int parkingRecordId,
+    required int vehicleId,
     required String plate,
   }) {
     showDialog(
@@ -119,19 +141,29 @@ class _ParkirMahasiswaState extends State<ParkirMahasiswa> {
         actions: [
           TextButton(
             child: const Text('BATAL'),
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () {
+              Navigator.of(context).pop();
+              _resetProcessing();
+            },
           ),
           ElevatedButton(
             child: const Text('KELUAR'),
             onPressed: () async {
               Navigator.of(context).pop(); // Tutup dialog
-              final success = await ParkingService().keluarParkirKendaraan(
-                parkingRecordId: parkingRecordId,
+              
+              // Gunakan scanParkirKendaraan untuk keluar (auto-detect)
+              final result = await ParkingService().scanParkirKendaraan(
+                vehicleId: vehicleId,
               );
-              if (success) {
-                _showSuccessDialog('Kendaraan berhasil keluar parkir.');
+
+              if (result != null) {
+                if (result['success'] == false) {
+                  _showErrorDialog(result['message'] ?? 'Gagal keluar parkir');
+                } else {
+                  _showSuccessDialog(result['message'] ?? 'Kendaraan berhasil keluar parkir');
+                }
               } else {
-                _showErrorDialog('Gagal keluar parkir. Coba lagi.');
+                _showErrorDialog('Tidak dapat terhubung ke server');
               }
             },
           ),
@@ -141,6 +173,7 @@ class _ParkirMahasiswaState extends State<ParkirMahasiswa> {
   }
 
   void _showVehicleInfoDialog({
+    required int vehicleId,
     required String type,
     required String brand,
     required String plate,
@@ -149,7 +182,7 @@ class _ParkirMahasiswaState extends State<ParkirMahasiswa> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Informasi'),
+        title: const Text('Informasi Kendaraan'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -158,28 +191,68 @@ class _ParkirMahasiswaState extends State<ParkirMahasiswa> {
             _buildInfoRow('Brand', brand),
             _buildInfoRow('Plat', plate),
             _buildInfoRow('Model', model),
+            const SizedBox(height: 16),
           ],
         ),
         actions: [
           TextButton(
             child: const Text('TOLAK'),
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () {
+              Navigator.of(context).pop();
+              _resetProcessing();
+            },
           ),
           ElevatedButton(
             child: const Text('TERIMA'),
             onPressed: () async {
               Navigator.of(context).pop(); // Tutup dialog
-
-              final result = await ParkingService().scanParkirKendaraan(
-                vehicleId: int.parse(scannedCode!.split('/').last),
+              
+              // Show loading indicator
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (_) => const AlertDialog(
+                  content: Row(
+                    children: [
+                      CircularProgressIndicator(),
+                      SizedBox(width: 16),
+                      Text('Memproses...'),
+                    ],
+                  ),
+                ),
               );
 
-              if (result != null && result['message'] != null) {
-                _showSuccessDialog(result['message']);
+              final result = await ParkingService().scanParkirKendaraan(
+                vehicleId: vehicleId,
+              );
+
+              // Close loading dialog
+              Navigator.of(context).pop();
+
+              if (result != null) {
+                if (result['success'] == false) {
+                  // Handle specific error cases
+                  String errorMessage = result['message'] ?? 'Terjadi kesalahan';
+                  
+                  if (result['status_code'] == 409) {
+                    // Kapasitas tidak mencukupi
+                    _showErrorDialog('⚠️ $errorMessage');
+                  } else if (result['status_code'] == 404) {
+                    // Kendaraan tidak ditemukan
+                    _showErrorDialog('❌ $errorMessage');
+                  } else if (result['status_code'] == 422) {
+                    // Data tidak valid
+                    _showErrorDialog('⚠️ $errorMessage');
+                  } else {
+                    _showErrorDialog(errorMessage);
+                  }
+                } else {
+                  // Success
+                  String successMessage = result['message'] ?? 'Kendaraan berhasil masuk parkir';
+                  _showSuccessDialog('✅ $successMessage');
+                }
               } else {
-                _showErrorDialog(
-                  'Gagal memproses parkir. Periksa koneksi atau coba lagi.',
-                );
+                _showErrorDialog('❌ Tidak dapat terhubung ke server. Periksa koneksi internet Anda.');
               }
             },
           ),
@@ -192,18 +265,32 @@ class _ParkirMahasiswaState extends State<ParkirMahasiswa> {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.0),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Icon(Icons.fiber_manual_record,
-              size: 10, color: Colors.deepPurple),
+              size: 8, color: Colors.deepPurple),
           const SizedBox(width: 8),
-          Text(
-            '$value',
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(width: 6),
-          Text(
-            '($label)',
-            style: const TextStyle(color: Colors.grey),
+          Expanded(
+            child: RichText(
+              text: TextSpan(
+                style: const TextStyle(color: Colors.black),
+                children: [
+                  TextSpan(
+                    text: '$label: ',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w500,
+                      color: Colors.grey,
+                    ),
+                  ),
+                  TextSpan(
+                    text: value,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
       ),
@@ -213,24 +300,73 @@ class _ParkirMahasiswaState extends State<ParkirMahasiswa> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Scan QR Parkir')),
+      appBar: AppBar(
+        title: const Text('Scan QR Parkir'),
+        backgroundColor: Colors.deepPurple,
+        foregroundColor: Colors.white,
+      ),
       body: Column(
         children: [
           Expanded(
             flex: 3,
-            child: MobileScanner(
-              controller: MobileScannerController(),
-              onDetect: _onDetect,
+            child: Stack(
+              children: [
+                MobileScanner(
+                  controller: MobileScannerController(),
+                  onDetect: _onDetect,
+                ),
+                if (_isProcessing)
+                  Container(
+                    color: Colors.black54,
+                    child: const Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          CircularProgressIndicator(color: Colors.white),
+                          SizedBox(height: 16),
+                          Text(
+                            'Memproses...',
+                            style: TextStyle(color: Colors.white, fontSize: 16),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
-          Expanded(
-            child: Center(
-              child: Text(
-                scannedCode != null
-                    ? 'Hasil Scan: $scannedCode'
-                    : 'Arahkan kamera ke QR Code',
-                style: const TextStyle(fontSize: 16),
-              ),
+          Container(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                const Text(
+                  'Arahkan kamera ke QR Code kendaraan',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 8),
+                if (scannedCode != null)
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.grey[300]!),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.qr_code, color: Colors.deepPurple),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Terdeteksi: ${scannedCode!}',
+                            style: const TextStyle(fontSize: 12),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
             ),
           ),
         ],
