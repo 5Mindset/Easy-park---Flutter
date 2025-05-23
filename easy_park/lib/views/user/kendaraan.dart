@@ -173,8 +173,8 @@ class _KendaraanScreenState extends State<KendaraanScreen> {
       final vehicle = vehicles[index];
       final model = vehicle['model'];
       final brand = model?['vehicle_brand'];
-      final type = model?['vehicle_brand']?['vehicle_type'];
-
+      final type = model?['vehicle_type']; // ← Ubah ini! Bukan dari vehicle_brand
+      
       return _buildVehicleCard(
         name: model?['name'] ?? 'Unknown Model',
         id: vehicle['id'].toString(),
@@ -295,6 +295,7 @@ class _KendaraanScreenState extends State<KendaraanScreen> {
                           }
                         },
                         style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.black, // Warna teks dan icon
                           side: const BorderSide(color: Colors.grey),
                         ),
                         child: const Text('EDIT'),

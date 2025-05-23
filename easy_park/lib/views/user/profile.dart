@@ -960,7 +960,7 @@ Widget _buildDateField(String label, TextEditingController controller, String pl
         style: const TextStyle(
           fontSize: 14,
           fontWeight: FontWeight.w600,
-          color: Color(0xFF2D1B89),
+          color: Colors.black,
         ),
       ),
       const SizedBox(height: 8),
