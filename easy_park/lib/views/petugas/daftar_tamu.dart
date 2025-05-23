@@ -216,7 +216,7 @@ class Tamu {
   factory Tamu.fromJson(Map<String, dynamic> json) {
     return Tamu(
       id: json['id'],
-      nama: json['owner_name'] ?? '',
+      nama: json['name'] ?? '',
       kendaraan: json['vehicle_type']?['name'] ?? '-',
       waktu: json['entry_time']?.substring(11, 16) ?? '-',
       kode: json['plate_number'] ?? '',
