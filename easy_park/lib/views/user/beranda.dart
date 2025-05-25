@@ -258,7 +258,7 @@ class _BerandaState extends State<Beranda> {
                       ),
                       const SizedBox(height: 15),
 
-                      // Only "Kontak" (full width)
+                      // Kontak
                       Row(
                         children: [
                           Expanded(
@@ -266,12 +266,36 @@ class _BerandaState extends State<Beranda> {
                               title: 'Kontak',
                               color: const Color(0xFFD1C4E9),
                               icon: 'assets/call.svg',
-                              onTap: () {},
+                              onTap: () {
+                                showDialog(
+                                  context: context,
+                                  builder: (_) => AlertDialog(
+                                    title: const Text('Kontak'),
+                                    content: const Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text('Telepon: 0812-3456-7890'),
+                                        SizedBox(height: 8),
+                                        Text('Email: support@easypark.com'),
+                                      ],
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.of(context).pop(),
+                                        child: const Text('Tutup'),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
                             ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 15),
+
+                      // Panduan
                       Row(
                         children: [
                           Expanded(
@@ -279,11 +303,74 @@ class _BerandaState extends State<Beranda> {
                               title: 'Panduan',
                               color: const Color(0xFFFFE0B2),
                               icon: 'assets/guide.svg',
-                              onTap: () {},
+                              onTap: () {
+                                showDialog(
+                                  context: context,
+                                  builder: (_) => AlertDialog(
+                                    title: const Text('Panduan'),
+                                    content: const Text('Pilih panduan yang ingin Anda lihat.'),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () {
+                                          Navigator.of(context).pop();
+                                          showDialog(
+                                            context: context,
+                                            builder: (_) => AlertDialog(
+                                              title: const Text('Baru Memulai?'),
+                                              content: const Column(
+                                                mainAxisSize: MainAxisSize.min,
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Text('1. Buka halaman Kendaraan.'),
+                                                  Text('2. Klik tombol Tambah.'),
+                                                  Text('3. Isi formulir dan klik Konfirmasi.'),
+                                                  Text('4. Pilih kendaraan yang sudah ditambahkan.'),
+                                                  Text('5. Akses QR Code dari tombol Navigasi bagian bawah tengah.'),
+                                                ],
+                                              ),
+                                              actions: [
+                                                TextButton(
+                                                  onPressed: () => Navigator.of(context).pop(),
+                                                  child: const Text('Tutup'),
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                        },
+                                        child: const Text('Baru Memulai?'),
+                                      ),
+                                      TextButton(
+                                        onPressed: () {
+                                          Navigator.of(context).pop();
+                                          showDialog(
+                                            context: context,
+                                            builder: (_) => AlertDialog(
+                                              title: const Text('Transaksi Real-time'),
+                                              content: const Text(
+                                                'Saat Anda sampai di Gerbang Polije, di sebelah kanan terdapat pos Satpam.\n\n'
+                                                'Tunjukkan QR Code Anda kepada petugas untuk proses verifikasi.\n\n'
+                                                'Sampaikan dengan sopan dan ramah ya!',
+                                              ),
+                                              actions: [
+                                                TextButton(
+                                                  onPressed: () => Navigator.of(context).pop(),
+                                                  child: const Text('Tutup'),
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                        },
+                                        child: const Text('Transaksi Real-time'),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
                             ),
                           ),
                         ],
                       ),
+
                       const SizedBox(height: 25),
 
                       // History Section
