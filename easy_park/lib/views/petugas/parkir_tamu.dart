@@ -74,7 +74,7 @@ class _ParkirTamuState extends State<ParkirTamu> {
           'Content-Type': 'application/json',
         },
         body: jsonEncode({
-          'owner_name': _namaController.text,
+          'name': _namaController.text, // ubah dari 'owner_name'
           'plate_number': _platController.text,
           'vehicle_type_id': _selectedTypeId,
           'status': 'parked',
@@ -82,31 +82,32 @@ class _ParkirTamuState extends State<ParkirTamu> {
       );
 
       if (response.statusCode == 201) {
-showDialog(
-  context: context,
-  builder: (context) => AlertDialog(
-    title: const Text('Sukses'),
-    content: const Text('Data tamu telah ditambahkan.\nSilakan cek daftar tamu.'),
-    actions: [
-      TextButton(
-        onPressed: () {
-          Navigator.pop(context); // tutup dialog
-          _namaController.clear();
-          _platController.clear();
-          setState(() {
-            _selectedTypeId = null;
-          });
-        },
-        child: const Text('OK'),
-      ),
-    ],
-  ),
-);
-
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Sukses'),
+            content: const Text(
+                'Data tamu telah ditambahkan.\nSilakan cek daftar tamu.'),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context); // tutup dialog
+                  _namaController.clear();
+                  _platController.clear();
+                  setState(() {
+                    _selectedTypeId = null;
+                  });
+                },
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
       } else {
         final error = jsonDecode(response.body);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal: ${error['message'] ?? response.body}')),
+          SnackBar(
+              content: Text('Gagal: ${error['message'] ?? response.body}')),
         );
       }
     } catch (e) {
@@ -140,7 +141,6 @@ showDialog(
                 ),
               ),
               const SizedBox(height: 20),
-
               const Text("Plat Nomor"),
               const SizedBox(height: 8),
               TextField(
@@ -153,7 +153,6 @@ showDialog(
                 ),
               ),
               const SizedBox(height: 20),
-
               const Text("Tipe Kendaraan"),
               const SizedBox(height: 8),
               DropdownButtonFormField<int>(
@@ -176,7 +175,6 @@ showDialog(
                 ),
               ),
               const SizedBox(height: 40),
-
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(

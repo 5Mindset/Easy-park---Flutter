@@ -62,6 +62,9 @@ class _DaftarTamuState extends State<DaftarTamu> {
             .map<Tamu>((json) => Tamu.fromJson(json))
             .toList();
 
+        // Sort by entry time in descending order (newest first)
+        all.sort((a, b) => b.entryDateTime.compareTo(a.entryDateTime));
+
         setState(() {
           tamuList = all;
           filteredList = all;
@@ -82,6 +85,9 @@ class _DaftarTamuState extends State<DaftarTamu> {
       filteredList = tamuList
           .where((tamu) => tamu.nama.toLowerCase().contains(searchQuery))
           .toList();
+      
+      // Keep the descending order after filtering
+      filteredList.sort((a, b) => b.entryDateTime.compareTo(a.entryDateTime));
     });
   }
 
@@ -204,6 +210,7 @@ class Tamu {
   final String kendaraan;
   final String waktu;
   final String kode;
+  final DateTime entryDateTime; // Added for sorting
 
   Tamu({
     required this.id,
@@ -211,15 +218,30 @@ class Tamu {
     required this.kendaraan,
     required this.waktu,
     required this.kode,
+    required this.entryDateTime,
   });
 
   factory Tamu.fromJson(Map<String, dynamic> json) {
+    String entryTimeString = json['entry_time'] ?? '';
+    DateTime entryDateTime = DateTime.now(); // Default fallback
+    
+    // Parse the full entry_time for sorting
+    try {
+      if (entryTimeString.isNotEmpty) {
+        entryDateTime = DateTime.parse(entryTimeString);
+      }
+    } catch (e) {
+      debugPrint('Error parsing entry_time: $e');
+      // Keep the default DateTime.now() as fallback
+    }
+
     return Tamu(
       id: json['id'],
       nama: json['name'] ?? '',
       kendaraan: json['vehicle_type']?['name'] ?? '-',
-      waktu: json['entry_time']?.substring(11, 16) ?? '-',
+      waktu: entryTimeString.isNotEmpty ? entryTimeString.substring(11, 16) : '-',
       kode: json['plate_number'] ?? '',
+      entryDateTime: entryDateTime,
     );
   }
 }

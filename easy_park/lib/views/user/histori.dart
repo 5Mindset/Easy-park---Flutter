@@ -10,35 +10,26 @@ class ParkingRecord {
   final String time;
   final String status;
   final String plate;
+  final DateTime dateTime; // Tambahkan untuk sorting
 
   ParkingRecord({
     required this.vehicle,
     required this.time,
     required this.status,
     required this.plate,
+    required this.dateTime,
   });
 
-  factory ParkingRecord.fromRawJson(Map<String, dynamic> json) {
-    String rawStatus = (json['status'] ?? '').toString().toLowerCase();
-    String displayStatus = '';
-    String rawTime = '';
-
-    if (rawStatus == 'parked') {
-      displayStatus = 'Masuk';
-      rawTime = json['entry_time'] ?? '';
-    } else if (rawStatus == 'exited') {
-      displayStatus = 'Keluar';
-      rawTime = json['exit_time'] ?? '';
-    } else {
-      displayStatus = json['status'] ?? '';
-      rawTime = json['entry_time'] ?? '';
-    }
-
+  // Factory untuk record masuk
+  factory ParkingRecord.fromRawJsonEntry(Map<String, dynamic> json) {
+    String rawTime = json['entry_time'] ?? '';
     String formattedTime = '';
+    DateTime dateTime = DateTime.now();
+
     if (rawTime.isNotEmpty) {
       try {
-        final parsedTime = DateTime.parse(rawTime);
-        formattedTime = DateFormat.Hm('id_ID').format(parsedTime);
+        dateTime = DateTime.parse(rawTime);
+        formattedTime = DateFormat.Hm('id_ID').format(dateTime);
       } catch (e) {
         formattedTime = '';
       }
@@ -47,20 +38,47 @@ class ParkingRecord {
     return ParkingRecord(
       vehicle: json['vehicle_type_name'] ?? '',
       time: formattedTime,
-      status: displayStatus,
+      status: 'Masuk',
       plate: json['plate_number'] ?? '',
+      dateTime: dateTime,
+    );
+  }
+
+  // Factory untuk record keluar
+  factory ParkingRecord.fromRawJsonExit(Map<String, dynamic> json) {
+    String rawTime = json['exit_time'] ?? '';
+    String formattedTime = '';
+    DateTime dateTime = DateTime.now();
+
+    if (rawTime.isNotEmpty) {
+      try {
+        dateTime = DateTime.parse(rawTime);
+        formattedTime = DateFormat.Hm('id_ID').format(dateTime);
+      } catch (e) {
+        formattedTime = '';
+      }
+    }
+
+    return ParkingRecord(
+      vehicle: json['vehicle_type_name'] ?? '',
+      time: formattedTime,
+      status: 'Keluar',
+      plate: json['plate_number'] ?? '',
+      dateTime: dateTime,
     );
   }
 }
 
 class ParkingHistorySection {
-  final String date;
+  final DateTime date;
   final List<ParkingRecord> records;
 
   ParkingHistorySection({
     required this.date,
     required this.records,
   });
+
+  String get formattedDate => DateFormat('d MMM', 'id_ID').format(date);
 }
 
 class Histori extends StatefulWidget {
@@ -120,32 +138,56 @@ class _HistoriState extends State<Histori> {
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
 
-        Map<String, List<ParkingRecord>> grouped = {};
+        // Map dengan DateTime key
+        Map<DateTime, List<ParkingRecord>> grouped = {};
+        
+        // List untuk menampung semua record
+        List<ParkingRecord> allRecords = [];
 
         for (var item in data) {
-          String rawTime = item['entry_time'] ?? item['exit_time'] ?? '';
-          if (rawTime.isEmpty) continue;
-
-          DateTime parsedTime = DateTime.tryParse(rawTime) ?? DateTime.now();
-          String formattedDate = DateFormat('d MMM', 'id_ID').format(parsedTime);
-
-          ParkingRecord record = ParkingRecord.fromRawJson(item);
-
-          if (!grouped.containsKey(formattedDate)) {
-            grouped[formattedDate] = [];
+          // Buat record untuk entry jika ada entry_time
+          if (item['entry_time'] != null && item['entry_time'].toString().isNotEmpty) {
+            try {
+              ParkingRecord entryRecord = ParkingRecord.fromRawJsonEntry(item);
+              allRecords.add(entryRecord);
+            } catch (e) {
+              print('Error parsing entry record: $e');
+            }
           }
-          grouped[formattedDate]!.add(record);
+
+          // Buat record untuk exit jika ada exit_time
+          if (item['exit_time'] != null && item['exit_time'].toString().isNotEmpty) {
+            try {
+              ParkingRecord exitRecord = ParkingRecord.fromRawJsonExit(item);
+              allRecords.add(exitRecord);
+            } catch (e) {
+              print('Error parsing exit record: $e');
+            }
+          }
         }
 
+        // Group by date
+        for (var record in allRecords) {
+          DateTime dateOnly = DateTime(record.dateTime.year, record.dateTime.month, record.dateTime.day);
+          
+          if (!grouped.containsKey(dateOnly)) {
+            grouped[dateOnly] = [];
+          }
+          grouped[dateOnly]!.add(record);
+        }
+
+        // Sort records dalam setiap section berdasarkan waktu (descending)
+        grouped.forEach((date, records) {
+          records.sort((a, b) => b.dateTime.compareTo(a.dateTime));
+        });
+
+        // Ubah map menjadi list of ParkingHistorySection
         List<ParkingHistorySection> sections = grouped.entries.map((entry) {
           return ParkingHistorySection(date: entry.key, records: entry.value);
         }).toList();
 
-        sections.sort((a, b) {
-          final dateA = DateFormat('d MMM', 'id_ID').parse(a.date);
-          final dateB = DateFormat('d MMM', 'id_ID').parse(b.date);
-          return dateB.compareTo(dateA);
-        });
+        // Urutkan sections dari tanggal terbaru ke terlama
+        sections.sort((a, b) => b.date.compareTo(a.date));
 
         setState(() {
           historyList = sections;
@@ -182,11 +224,11 @@ class _HistoriState extends State<Histori> {
     }
   }
 
-  Widget _buildDateSection(String date) {
+  Widget _buildDateSection(DateTime date) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Text(
-        date,
+        DateFormat('d MMM', 'id_ID').format(date),
         style: const TextStyle(
           fontWeight: FontWeight.bold,
           color: Colors.black54,
@@ -219,6 +261,11 @@ class _HistoriState extends State<Histori> {
           CircleAvatar(
             radius: 20,
             backgroundColor: isMasuk ? Colors.greenAccent : Colors.redAccent,
+            child: Icon(
+              isMasuk ? Icons.arrow_downward : Icons.arrow_upward,
+              color: Colors.white,
+              size: 20,
+            ),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -263,10 +310,11 @@ class _HistoriState extends State<Histori> {
     final filteredHistory = _selectedDate == null
         ? historyList
         : historyList.where((section) {
-            final sectionDate = DateFormat('d MMM', 'id_ID').parse(section.date);
-            return sectionDate.day == _selectedDate!.day &&
-                sectionDate.month == _selectedDate!.month &&
-                sectionDate.year == _selectedDate!.year;
+            final sectionDate = section.date;
+            final selectedDateOnly = DateTime(_selectedDate!.year, _selectedDate!.month, _selectedDate!.day);
+            return sectionDate.year == selectedDateOnly.year &&
+                sectionDate.month == selectedDateOnly.month &&
+                sectionDate.day == selectedDateOnly.day;
           }).toList();
 
     return Scaffold(
@@ -280,7 +328,19 @@ class _HistoriState extends State<Histori> {
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : errorMessage != null
-              ? Center(child: Text(errorMessage!))
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(errorMessage!),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: () => _loadTokenAndFetchData(),
+                        child: const Text('Coba Lagi'),
+                      ),
+                    ],
+                  ),
+                )
               : ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
@@ -311,15 +371,29 @@ class _HistoriState extends State<Histori> {
                       ],
                     ),
                     const SizedBox(height: 16),
-                    ...filteredHistory.map((section) {
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildDateSection(section.date),
-                          ...section.records.map(_buildHistoryCard).toList(),
-                        ],
-                      );
-                    }).toList(),
+                    if (filteredHistory.isEmpty)
+                      const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(32.0),
+                          child: Text(
+                            'Tidak ada data history',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ),
+                      )
+                    else
+                      ...filteredHistory.map((section) {
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildDateSection(section.date),
+                            ...section.records.map(_buildHistoryCard).toList(),
+                          ],
+                        );
+                      }).toList(),
                   ],
                 ),
     );

@@ -91,6 +91,14 @@ class _ParkirMahasiswaState extends State<ParkirMahasiswa> {
     });
   }
 
+  // Method baru untuk reset scan setelah transaksi berhasil
+  void _resetScanForNewTransaction() {
+    setState(() {
+      scannedCode = null; // Reset scanned code agar bisa scan QR yang sama lagi
+      _isProcessing = false;
+    });
+  }
+
   void _showErrorDialog(String message) {
     showDialog(
       context: context,
@@ -121,7 +129,7 @@ class _ParkirMahasiswaState extends State<ParkirMahasiswa> {
             child: const Text('OK'),
             onPressed: () {
               Navigator.of(context).pop();
-              _resetProcessing();
+              _resetScanForNewTransaction(); // Reset scan untuk transaksi baru
             },
           ),
         ],

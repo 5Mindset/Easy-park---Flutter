@@ -585,326 +585,330 @@ Future<void> _selectDate(BuildContext context) async {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey.shade50,
-      body: Stack(
-        children: [
-          // Header gradient background with proper height
-          Container(
-            height: MediaQuery.of(context).size.height * 0.35,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFF130160), Color(0xFF2D1B89)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+Widget build(BuildContext context) {
+  return Scaffold(
+    backgroundColor: Colors.grey.shade50,
+    body: Stack(
+      children: [
+        // Header gradient background with proper height and rounded bottom
+        Container(
+          height: MediaQuery.of(context).size.height * 0.35,
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF130160), Color(0xFF2D1B89)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(30),
+              bottomRight: Radius.circular(30),
             ),
           ),
+        ),
 
-          // Logout button
-          Positioned(
-            top: MediaQuery.of(context).padding.top + 10,
-            left: 16,
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: Colors.white.withOpacity(0.3),
-                  width: 1,
-                ),
+        // Logout button
+        Positioned(
+          top: MediaQuery.of(context).padding.top + 10,
+          left: 16,
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: Colors.white.withOpacity(0.3),
+                width: 1,
               ),
-              child: TextButton.icon(
-                onPressed: () async {
-                  await _handleLogout(context);
-                },
-                icon: const Icon(
-                  Icons.logout,
+            ),
+            child: TextButton.icon(
+              onPressed: () async {
+                await _handleLogout(context);
+              },
+              icon: const Icon(
+                Icons.logout,
+                color: Colors.white,
+                size: 18,
+              ),
+              label: const Text(
+                'Log out',
+                style: TextStyle(
                   color: Colors.white,
-                  size: 18,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
                 ),
-                label: const Text(
-                  'Log out',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                style: TextButton.styleFrom(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                ),
+              ),
+              style: TextButton.styleFrom(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               ),
             ),
           ),
+        ),
 
-          SafeArea(
-            child: Column(
-              children: [
-                // Profile section
-                Container(
-                  padding: const EdgeInsets.symmetric(vertical: 30),
-                  child: Column(
-                    children: [
-                      // Profile image with shadow
-                      GestureDetector(
-                        onTap: _isLoading ? null : _showImageSourceOptions,
-                        child: Stack(
-                          children: [
-                            Container(
-                              width: 90,
-                              height: 90,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: Colors.white,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.15),
-                                    blurRadius: 10,
-                                    spreadRadius: 2,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: ClipOval(
-                                child: _profileImageUrl != null &&
-                                        _profileImageUrl!.isNotEmpty
-                                    ? Image.network(
-                                        '$baseUrl/$_profileImageUrl',
-                                        fit: BoxFit.cover,
-                                        width: 90,
-                                        height: 90,
-                                        loadingBuilder:
-                                            (context, child, loadingProgress) {
-                                          if (loadingProgress == null)
-                                            return child;
-                                          return const Center(
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                              valueColor:
-                                                  AlwaysStoppedAnimation<Color>(
-                                                      Color(0xFF130160)),
-                                            ),
-                                          );
-                                        },
-                                        errorBuilder:
-                                            (context, error, stackTrace) {
-                                          debugPrint(
-                                              'Failed to load profile image: $error');
-                                          return Container(
-                                            padding: const EdgeInsets.all(20),
-                                            child: SvgPicture.asset(
-                                              'assets/profile.svg',
-                                              fit: BoxFit.cover,
-                                            ),
-                                          );
-                                        },
-                                      )
-                                    : Container(
-                                        padding: const EdgeInsets.all(20),
-                                        child: SvgPicture.asset(
-                                          'assets/profile.svg',
-                                          fit: BoxFit.cover,
-                                        ),
-                                      ),
-                              ),
-                            ),
-                            Positioned(
-                              bottom: 0,
-                              right: 0,
-                              child: Container(
-                                padding: const EdgeInsets.all(6),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF130160),
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: Colors.white,
-                                    width: 2,
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.2),
-                                      blurRadius: 4,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                                child: const Icon(
-                                  Icons.edit,
-                                  color: Colors.white,
-                                  size: 16,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-
-                      // Name and email
-                      Text(
-                        _displayName,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        _displayEmail,
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.9),
-                          fontSize: 14,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Edit photo button
-                      Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(25),
-                          border: Border.all(
-                            color: Colors.white.withOpacity(0.3),
-                            width: 1,
-                          ),
-                        ),
-                        child: ElevatedButton.icon(
-                          onPressed:
-                              _isLoading ? null : _showImageSourceOptions,
-                          icon: const Icon(
-                            Icons.camera_alt,
-                            size: 18,
-                          ),
-                          label: const Text(
-                            'Edit foto profil',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white.withOpacity(0.2),
-                            foregroundColor: Colors.white,
-                            elevation: 0,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 10,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(25),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Form section with proper padding
-                Expanded(
-                  child: Container(
-                    width: double.infinity,
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(30),
-                        topRight: Radius.circular(30),
-                      ),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: ListView(
+        SafeArea(
+          child: Column(
+            children: [
+              // Profile section
+              Container(
+                padding: const EdgeInsets.symmetric(vertical: 30),
+                child: Column(
+                  children: [
+                    // Profile image with shadow
+                    GestureDetector(
+                      onTap: _isLoading ? null : _showImageSourceOptions,
+                      child: Stack(
                         children: [
-                          _buildTextField('Username', _usernameController,
-                              'Brandone Louis'),
-                          const SizedBox(height: 20),
-                          _buildTextField('NIM', _nimController, 'E1234567890'),
-                          const SizedBox(height: 20),
-                          _buildTextField('Nama Lengkap', _fullNameController,
-                              'Brandone Louis Smith'),
-                          const SizedBox(height: 20),
-                          _buildDateField('Tanggal Lahir',
-                              _dateOfBirthController, '01-01-1990'),
-                          const SizedBox(height: 20),
-                          _buildTextField('Alamat', _alamatController,
-                              'California, United States'),
-                          const SizedBox(height: 20),
-                          _buildTextField('Email', _emailController,
-                              'Brandonelouis@gmail.com'),
-                          const SizedBox(height: 20),
-                          // Added missing No Telp field
-                          _buildTextField('No Telp', _noTelpController,
-                              '+62 812 3456 7890'),
-                          const SizedBox(
-                              height: 30), // Increased spacing before button
-
-                          // Update button with consistent spacing
                           Container(
-                            width: double.infinity,
-                            height: 54,
+                            width: 90,
+                            height: 90,
                             decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(16),
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFF130160), Color(0xFF2D1B89)],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
+                              shape: BoxShape.circle,
+                              color: Colors.white,
                               boxShadow: [
                                 BoxShadow(
-                                  color:
-                                      const Color(0xFF130160).withOpacity(0.3),
-                                  blurRadius: 8,
+                                  color: Colors.black.withOpacity(0.15),
+                                  blurRadius: 10,
+                                  spreadRadius: 2,
                                   offset: const Offset(0, 4),
                                 ),
                               ],
                             ),
-                            child: ElevatedButton(
-                              onPressed:
-                                  _isLoading ? null : _handleUpdateProfile,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.transparent,
-                                shadowColor: Colors.transparent,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                              ),
-                              child: _isLoading
-                                  ? const SizedBox(
-                                      width: 24,
-                                      height: 24,
-                                      child: CircularProgressIndicator(
-                                        color: Colors.white,
-                                        strokeWidth: 2,
-                                      ),
+                            child: ClipOval(
+                              child: _profileImageUrl != null &&
+                                      _profileImageUrl!.isNotEmpty
+                                  ? Image.network(
+                                      '$baseUrl/$_profileImageUrl',
+                                      fit: BoxFit.cover,
+                                      width: 90,
+                                      height: 90,
+                                      loadingBuilder:
+                                          (context, child, loadingProgress) {
+                                        if (loadingProgress == null)
+                                          return child;
+                                        return const Center(
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            valueColor:
+                                                AlwaysStoppedAnimation<Color>(
+                                                    Color(0xFF130160)),
+                                          ),
+                                        );
+                                      },
+                                      errorBuilder:
+                                          (context, error, stackTrace) {
+                                        debugPrint(
+                                            'Failed to load profile image: $error');
+                                        return Container(
+                                          padding: const EdgeInsets.all(20),
+                                          child: SvgPicture.asset(
+                                            'assets/profile.svg',
+                                            fit: BoxFit.cover,
+                                          ),
+                                        );
+                                      },
                                     )
-                                  : const Text(
-                                      'PERBARUI PROFIL',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        letterSpacing: 0.5,
+                                  : Container(
+                                      padding: const EdgeInsets.all(20),
+                                      child: SvgPicture.asset(
+                                        'assets/profile.svg',
+                                        fit: BoxFit.cover,
                                       ),
                                     ),
                             ),
                           ),
-                          const SizedBox(
-                              height: 30), // Bottom padding for scroll
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF130160),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 2,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.2),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: const Icon(
+                                Icons.edit,
+                                color: Colors.white,
+                                size: 16,
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ),
+                    const SizedBox(height: 12),
+
+                    // Name and email
+                    Text(
+                      _displayName,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _displayEmail,
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.9),
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Edit photo button
+                    Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(25),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.3),
+                          width: 1,
+                        ),
+                      ),
+                      child: ElevatedButton.icon(
+                        onPressed:
+                            _isLoading ? null : _showImageSourceOptions,
+                        icon: const Icon(
+                          Icons.camera_alt,
+                          size: 18,
+                        ),
+                        label: const Text(
+                          'Edit foto profil',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white.withOpacity(0.2),
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 10,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(25),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Form section with proper padding
+              Expanded(
+                child: Container(
+                  width: double.infinity,
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(30),
+                      topRight: Radius.circular(30),
+                    ),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: ListView(
+                      children: [
+                        _buildTextField('Username', _usernameController,
+                            'Brandone Louis'),
+                        const SizedBox(height: 20),
+                        _buildTextField('NIM', _nimController, 'E1234567890'),
+                        const SizedBox(height: 20),
+                        _buildTextField('Nama Lengkap', _fullNameController,
+                            'Brandone Louis Smith'),
+                        const SizedBox(height: 20),
+                        _buildDateField('Tanggal Lahir',
+                            _dateOfBirthController, '01-01-1990'),
+                        const SizedBox(height: 20),
+                        _buildTextField('Alamat', _alamatController,
+                            'California, United States'),
+                        const SizedBox(height: 20),
+                        _buildTextField('Email', _emailController,
+                            'Brandonelouis@gmail.com'),
+                        const SizedBox(height: 20),
+                        // Added missing No Telp field
+                        _buildTextField('No Telp', _noTelpController,
+                            '+62 812 3456 7890'),
+                        const SizedBox(
+                            height: 30), // Increased spacing before button
+
+                        // Update button with consistent spacing
+                        Container(
+                          width: double.infinity,
+                          height: 54,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(16),
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF130160), Color(0xFF2D1B89)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color:
+                                    const Color(0xFF130160).withOpacity(0.3),
+                                blurRadius: 8,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: ElevatedButton(
+                            onPressed:
+                                _isLoading ? null : _handleUpdateProfile,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.transparent,
+                              shadowColor: Colors.transparent,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                            ),
+                            child: _isLoading
+                                ? const SizedBox(
+                                    width: 24,
+                                    height: 24,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Text(
+                                    'PERBARUI PROFIL',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                        const SizedBox(
+                            height: 30), // Bottom padding for scroll
+                      ],
+                    ),
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
-    );
-  }
+        ),
+      ],
+    ),
+  );
+}
 
   Widget _buildTextField(
       String label, TextEditingController controller, String hintText) {
