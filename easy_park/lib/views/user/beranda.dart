@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 
 import 'package:easy_park/constants/api_config.dart';
 import 'package:easy_park/services/local_db_service.dart';
@@ -72,7 +73,7 @@ class _BerandaState extends State<Beranda> {
                   ? 'Keluar'
                   : '-';
 
-          statusDate = '-'; // Bisa disesuaikan jika backend menyediakan waktu
+          statusDate = DateFormat('HH:mm').format(DateTime.now());
         });
       } else {
         debugPrint('fetchLastStatus error: ${response.statusCode}');
@@ -256,17 +257,10 @@ class _BerandaState extends State<Beranda> {
                         ),
                       ),
                       const SizedBox(height: 15),
+
+                      // Only "Kontak" (full width)
                       Row(
                         children: [
-                          Expanded(
-                            child: FeatureButton(
-                              title: 'Scan\nKode QR',
-                              color: const Color(0xFFB3E5FC),
-                              icon: 'assets/qrcode2.svg',
-                              onTap: () {},
-                            ),
-                          ),
-                          const SizedBox(width: 15),
                           Expanded(
                             child: FeatureButton(
                               title: 'Kontak',
