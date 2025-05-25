@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 import 'package:easy_park/constants/api_config.dart';
 import 'package:easy_park/services/local_db_service.dart';
 
@@ -16,15 +17,44 @@ class ParkingRecord {
     required this.status,
     required this.plate,
   });
+factory ParkingRecord.fromRawJson(Map<String, dynamic> json) {
+  String rawStatus = (json['status'] ?? '').toString().toLowerCase();
 
-  factory ParkingRecord.fromRawJson(Map<String, dynamic> json) {
-    return ParkingRecord(
-      vehicle: json['owner_name'] ?? '',
-      time: json['entry_time'] ?? '',
-      status: json['status'] ?? '',
-      plate: json['plate_number'] ?? '',
-    );
+  // Mapping status DB ke tampilan
+  String displayStatus = '';
+  String rawTime = '';
+
+  if (rawStatus == 'parked') {
+    displayStatus = 'Masuk';
+    rawTime = json['entry_time'] ?? '';
+  } else if (rawStatus == 'exited') {
+    displayStatus = 'Keluar';
+    rawTime = json['exit_time'] ?? '';
+  } else {
+    displayStatus = json['status'] ?? '';
+    // fallback kalau ada status lain, coba entry_time dulu
+    rawTime = json['entry_time'] ?? '';
   }
+
+  String formattedTime = '';
+  if (rawTime.isNotEmpty) {
+    try {
+      final parsedTime = DateTime.parse(rawTime);
+      formattedTime = DateFormat.Hm('id_ID').format(parsedTime);
+    } catch (e) {
+      // Kalau parsing gagal, kosongkan saja
+      formattedTime = '';
+    }
+  }
+
+  return ParkingRecord(
+    vehicle: json['vehicle_type_name'] ?? '',
+    time: formattedTime,
+    status: displayStatus,
+    plate: json['plate_number'] ?? '',
+  );
+}
+
 }
 
 class ParkingHistorySection {
@@ -96,20 +126,25 @@ class _HistoriState extends State<Histori> {
         Map<String, List<ParkingRecord>> grouped = {};
 
         for (var item in data) {
-          DateTime entry = DateTime.parse(item['entry_time']);
-          String date = '${entry.year}-${entry.month.toString().padLeft(2, '0')}-${entry.day.toString().padLeft(2, '0')}';
+          String rawTime = item['entry_time'] ?? item['exit_time'] ?? '';
+          if (rawTime.isEmpty) continue;
+
+          DateTime parsedTime = DateTime.tryParse(rawTime) ?? DateTime.now();
+          String formattedDate = DateFormat('d MMM', 'id_ID').format(parsedTime);
 
           ParkingRecord record = ParkingRecord.fromRawJson(item);
 
-          if (!grouped.containsKey(date)) {
-            grouped[date] = [];
+          if (!grouped.containsKey(formattedDate)) {
+            grouped[formattedDate] = [];
           }
-          grouped[date]!.add(record);
+          grouped[formattedDate]!.add(record);
         }
 
         List<ParkingHistorySection> sections = grouped.entries.map((entry) {
           return ParkingHistorySection(date: entry.key, records: entry.value);
         }).toList();
+
+        sections.sort((a, b) => b.date.compareTo(a.date)); // urut mundur
 
         setState(() {
           historyList = sections;
