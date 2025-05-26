@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 
 import 'package:easy_park/constants/api_config.dart';
 import 'package:easy_park/services/local_db_service.dart';
+import 'package:easy_park/views/user/PanduanPage.dart'; // pastikan file ini ada
 
 class Beranda extends StatefulWidget {
   const Beranda({Key? key}) : super(key: key);
@@ -72,7 +73,6 @@ class _BerandaState extends State<Beranda> {
               : (statusApi == 'exited' || statusApi == 'keluar')
                   ? 'Keluar'
                   : '-';
-
           statusDate = DateFormat('HH:mm').format(DateTime.now());
         });
       } else {
@@ -247,7 +247,6 @@ class _BerandaState extends State<Beranda> {
                       ),
                       const SizedBox(height: 15),
 
-                      // Features Section
                       const Text(
                         'Fitur',
                         style: TextStyle(
@@ -258,7 +257,6 @@ class _BerandaState extends State<Beranda> {
                       ),
                       const SizedBox(height: 15),
 
-                      // Kontak
                       Row(
                         children: [
                           Expanded(
@@ -291,79 +289,16 @@ class _BerandaState extends State<Beranda> {
                               },
                             ),
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 15),
-
-                      // Panduan
-                      Row(
-                        children: [
+                          const SizedBox(width: 10),
                           Expanded(
                             child: FeatureButton(
                               title: 'Panduan',
                               color: const Color(0xFFFFE0B2),
                               icon: 'assets/guide.svg',
                               onTap: () {
-                                showDialog(
-                                  context: context,
-                                  builder: (_) => AlertDialog(
-                                    title: const Text('Panduan'),
-                                    content: const Text('Pilih panduan yang ingin Anda lihat.'),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () {
-                                          Navigator.of(context).pop();
-                                          showDialog(
-                                            context: context,
-                                            builder: (_) => AlertDialog(
-                                              title: const Text('Baru Memulai?'),
-                                              content: const Column(
-                                                mainAxisSize: MainAxisSize.min,
-                                                crossAxisAlignment: CrossAxisAlignment.start,
-                                                children: [
-                                                  Text('1. Buka halaman Kendaraan.'),
-                                                  Text('2. Klik tombol Tambah.'),
-                                                  Text('3. Isi formulir dan klik Konfirmasi.'),
-                                                  Text('4. Pilih kendaraan yang sudah ditambahkan.'),
-                                                  Text('5. Akses QR Code dari tombol Navigasi bagian bawah tengah.'),
-                                                ],
-                                              ),
-                                              actions: [
-                                                TextButton(
-                                                  onPressed: () => Navigator.of(context).pop(),
-                                                  child: const Text('Tutup'),
-                                                ),
-                                              ],
-                                            ),
-                                          );
-                                        },
-                                        child: const Text('Baru Memulai?'),
-                                      ),
-                                      TextButton(
-                                        onPressed: () {
-                                          Navigator.of(context).pop();
-                                          showDialog(
-                                            context: context,
-                                            builder: (_) => AlertDialog(
-                                              title: const Text('Transaksi Real-time'),
-                                              content: const Text(
-                                                'Saat Anda sampai di Gerbang Polije, di sebelah kanan terdapat pos Satpam.\n\n'
-                                                'Tunjukkan QR Code Anda kepada petugas untuk proses verifikasi.\n\n'
-                                                'Sampaikan dengan sopan dan ramah ya!',
-                                              ),
-                                              actions: [
-                                                TextButton(
-                                                  onPressed: () => Navigator.of(context).pop(),
-                                                  child: const Text('Tutup'),
-                                                ),
-                                              ],
-                                            ),
-                                          );
-                                        },
-                                        child: const Text('Transaksi Real-time'),
-                                      ),
-                                    ],
-                                  ),
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (_) => const PanduanPage()),
                                 );
                               },
                             ),
@@ -373,7 +308,6 @@ class _BerandaState extends State<Beranda> {
 
                       const SizedBox(height: 25),
 
-                      // History Section
                       const Text(
                         'Histori',
                         style: TextStyle(
