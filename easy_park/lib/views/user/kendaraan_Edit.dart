@@ -41,10 +41,25 @@ class _VehicleEditScreenState extends State<VehicleEditScreen> {
     _selectedModelId = widget.vehicle['model']?['id'];
     _selectedBrandId = widget.vehicle['model']?['vehicle_brand']?['id'];
     _selectedTypeId = widget.vehicle['model']?['vehicle_type']?['id'];
-    _existingStnkUrl = widget.vehicle['stnk_image'] != null
-        ? '$baseUrl/storage/${widget.vehicle['stnk_image']}'
-        : null;
+    
+    // Configure STNK URL using the new function
+    _existingStnkUrl = _configureStnkUrl(widget.vehicle['stnk_image']);
+    
     _fetchVehicleTypes();
+  }
+
+  // Function to configure STNK URL properly
+  String? _configureStnkUrl(String? rawUrl) {
+    if (rawUrl == null || rawUrl.isEmpty) {
+      return null;
+    }
+
+    // Deteksi kalau belum ada "public/"
+    if (!rawUrl.contains('public/')) {
+      return 'https://webfw23.myhost.id/gol_bws3/public/storage/$rawUrl';
+    } else {
+      return 'https://webfw23.myhost.id/gol_bws3/storage/$rawUrl';
+    }
   }
 
   Future<void> _fetchVehicleTypes() async {
@@ -93,12 +108,14 @@ class _VehicleEditScreenState extends State<VehicleEditScreen> {
       return;
     }
 
-    final brandResult = await VehicleService.getVehicleBrandsByType(_selectedTypeId!);
+    final brandResult =
+        await VehicleService.getVehicleBrandsByType(_selectedTypeId!);
     setState(() {
       if (brandResult['success']) {
         _brands = List<Map<String, dynamic>>.from(brandResult['data']);
         // Restore selected brand if it exists in the list
-        final originalBrandId = widget.vehicle['model']?['vehicle_brand']?['id'];
+        final originalBrandId =
+            widget.vehicle['model']?['vehicle_brand']?['id'];
         if (originalBrandId != null &&
             _brands.any((b) => b['id'] == originalBrandId)) {
           _selectedBrandId = originalBrandId;
@@ -130,7 +147,8 @@ class _VehicleEditScreenState extends State<VehicleEditScreen> {
       return;
     }
 
-    final modelResult = await VehicleService.getVehicleModelsByBrand(_selectedBrandId!);
+    final modelResult =
+        await VehicleService.getVehicleModelsByBrand(_selectedBrandId!);
     setState(() {
       if (modelResult['success']) {
         _models = List<Map<String, dynamic>>.from(modelResult['data']);
@@ -238,7 +256,8 @@ class _VehicleEditScreenState extends State<VehicleEditScreen> {
           _errorMessage = modelResult['message'];
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal membuat model: ${modelResult['message']}')),
+          SnackBar(
+              content: Text('Gagal membuat model: ${modelResult['message']}')),
         );
         return;
       }
@@ -264,7 +283,8 @@ class _VehicleEditScreenState extends State<VehicleEditScreen> {
       Navigator.pop(context, result['data']);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${result['message']}\nDetails: ${result['error']}')),
+        SnackBar(
+            content: Text('${result['message']}\nDetails: ${result['error']}')),
       );
     }
   }
@@ -284,7 +304,8 @@ class _VehicleEditScreenState extends State<VehicleEditScreen> {
         child: _isLoading
             ? const Center(child: CircularProgressIndicator())
             : _errorMessage != null
-                ? Center(child: Text(_errorMessage!, textAlign: TextAlign.center))
+                ? Center(
+                    child: Text(_errorMessage!, textAlign: TextAlign.center))
                 : Padding(
                     padding: const EdgeInsets.all(20.0),
                     child: Column(
@@ -304,10 +325,13 @@ class _VehicleEditScreenState extends State<VehicleEditScreen> {
                           child: SingleChildScrollView(
                             child: Column(
                               children: [
-                                buildTextField('No Plat', _plateController, hint: 'P3333'),
+                                buildTextField('No Plat', _plateController,
+                                    hint: 'P3333'),
                                 buildDropdown(
                                   'Tipe',
-                                  _types.map((t) => t['name'].toString()).toList(),
+                                  _types
+                                      .map((t) => t['name'].toString())
+                                      .toList(),
                                   _selectedTypeId != null
                                       ? _types.firstWhere(
                                           (t) => t['id'] == _selectedTypeId,
@@ -329,7 +353,9 @@ class _VehicleEditScreenState extends State<VehicleEditScreen> {
                                 ),
                                 buildDropdown(
                                   'Merk',
-                                  _brands.map((b) => b['name'].toString()).toList(),
+                                  _brands
+                                      .map((b) => b['name'].toString())
+                                      .toList(),
                                   _selectedBrandId != null
                                       ? _brands.firstWhere(
                                           (b) => b['id'] == _selectedBrandId,
@@ -364,6 +390,7 @@ class _VehicleEditScreenState extends State<VehicleEditScreen> {
                                   ),
                                 ),
                                 const SizedBox(height: 8),
+                                // Updated STNK image container with better URL handling
                                 GestureDetector(
                                   onTap: _showImageSourceDialog,
                                   child: Container(
@@ -374,7 +401,8 @@ class _VehicleEditScreenState extends State<VehicleEditScreen> {
                                     ),
                                     child: _stnkImage != null
                                         ? ClipRRect(
-                                            borderRadius: BorderRadius.circular(8),
+                                            borderRadius:
+                                                BorderRadius.circular(8),
                                             child: Stack(
                                               fit: StackFit.expand,
                                               children: [
@@ -392,30 +420,112 @@ class _VehicleEditScreenState extends State<VehicleEditScreen> {
                                                       });
                                                     },
                                                     child: Container(
-                                                      padding: const EdgeInsets.all(4),
-                                                      decoration: const BoxDecoration(
+                                                      padding:
+                                                          const EdgeInsets.all(
+                                                              4),
+                                                      decoration:
+                                                          const BoxDecoration(
                                                         color: Colors.white,
                                                         shape: BoxShape.circle,
                                                       ),
-                                                      child: const Icon(Icons.close, size: 16, color: Colors.red),
+                                                      child: const Icon(
+                                                          Icons.close,
+                                                          size: 16,
+                                                          color: Colors.red),
                                                     ),
                                                   ),
                                                 ),
                                               ],
                                             ),
                                           )
-                                        : _existingStnkUrl != null
+                                        : _existingStnkUrl != null &&
+                                                _existingStnkUrl!.isNotEmpty
                                             ? ClipRRect(
-                                                borderRadius: BorderRadius.circular(8),
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
                                                 child: Stack(
                                                   fit: StackFit.expand,
                                                   children: [
                                                     Image.network(
                                                       _existingStnkUrl!,
                                                       fit: BoxFit.cover,
-                                                      errorBuilder: (context, error, stackTrace) => const Center(
-                                                        child: Text('Gagal memuat gambar STNK'),
-                                                      ),
+                                                      loadingBuilder: (context,
+                                                          child,
+                                                          loadingProgress) {
+                                                        if (loadingProgress ==
+                                                            null) return child;
+                                                        return Center(
+                                                          child:
+                                                              CircularProgressIndicator(
+                                                            value: loadingProgress
+                                                                        .expectedTotalBytes !=
+                                                                    null
+                                                                ? loadingProgress
+                                                                        .cumulativeBytesLoaded /
+                                                                    loadingProgress
+                                                                        .expectedTotalBytes!
+                                                                : null,
+                                                          ),
+                                                        );
+                                                      },
+                                                      errorBuilder: (context,
+                                                          error, stackTrace) {
+                                                        print(
+                                                            'Error loading image: $error'); // Debug log
+                                                        print(
+                                                            'Attempting to load URL: $_existingStnkUrl'); // Debug log
+                                                        return Container(
+                                                          color: Colors
+                                                              .grey.shade200,
+                                                          child: Column(
+                                                            mainAxisAlignment:
+                                                                MainAxisAlignment
+                                                                    .center,
+                                                            children: [
+                                                              Icon(
+                                                                Icons
+                                                                    .broken_image,
+                                                                size: 40,
+                                                                color: Colors
+                                                                    .grey
+                                                                    .shade600,
+                                                              ),
+                                                              const SizedBox(
+                                                                  height: 8),
+                                                              Text(
+                                                                'Gagal memuat gambar',
+                                                                style:
+                                                                    TextStyle(
+                                                                  color: Colors
+                                                                      .grey
+                                                                      .shade600,
+                                                                  fontSize: 12,
+                                                                ),
+                                                                textAlign:
+                                                                    TextAlign
+                                                                        .center,
+                                                              ),
+                                                              const SizedBox(
+                                                                  height: 4),
+                                                              TextButton(
+                                                                onPressed: () {
+                                                                  setState(() {
+                                                                    // Re-configure URL and force rebuild
+                                                                    _existingStnkUrl = _configureStnkUrl(widget.vehicle['stnk_image']);
+                                                                  });
+                                                                },
+                                                                child:
+                                                                    const Text(
+                                                                  'Coba Lagi',
+                                                                  style: TextStyle(
+                                                                      fontSize:
+                                                                          11),
+                                                                ),
+                                                              ),
+                                                            ],
+                                                          ),
+                                                        );
+                                                      },
                                                     ),
                                                     Positioned(
                                                       top: 8,
@@ -423,17 +533,26 @@ class _VehicleEditScreenState extends State<VehicleEditScreen> {
                                                       child: GestureDetector(
                                                         onTap: () {
                                                           setState(() {
-                                                            _existingStnkUrl = null;
+                                                            _existingStnkUrl =
+                                                                null;
                                                             _stnkImage = null;
                                                           });
                                                         },
                                                         child: Container(
-                                                          padding: const EdgeInsets.all(4),
-                                                          decoration: const BoxDecoration(
+                                                          padding:
+                                                              const EdgeInsets
+                                                                  .all(4),
+                                                          decoration:
+                                                              const BoxDecoration(
                                                             color: Colors.white,
-                                                            shape: BoxShape.circle,
+                                                            shape:
+                                                                BoxShape.circle,
                                                           ),
-                                                          child: const Icon(Icons.close, size: 16, color: Colors.red),
+                                                          child: const Icon(
+                                                              Icons.close,
+                                                              size: 16,
+                                                              color:
+                                                                  Colors.red),
                                                         ),
                                                       ),
                                                     ),
@@ -446,19 +565,30 @@ class _VehicleEditScreenState extends State<VehicleEditScreen> {
                                                 strokeWidth: 1.2,
                                                 child: Center(
                                                   child: Column(
-                                                    mainAxisAlignment: MainAxisAlignment.center,
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment
+                                                            .center,
                                                     children: [
-                                                      Icon(Icons.add_a_photo, size: 30, color: Colors.grey.shade600),
-                                                      const SizedBox(height: 10),
+                                                      Icon(Icons.add_a_photo,
+                                                          size: 30,
+                                                          color: Colors
+                                                              .grey.shade600),
+                                                      const SizedBox(
+                                                          height: 10),
                                                       const Text(
                                                         'Unggah Foto STNK',
-                                                        style: TextStyle(color: Colors.grey),
+                                                        style: TextStyle(
+                                                            color: Colors.grey),
                                                       ),
                                                       const SizedBox(height: 5),
                                                       Text(
                                                         'Tap untuk mengambil foto atau memilih dari galeri',
-                                                        style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                                                        textAlign: TextAlign.center,
+                                                        style: TextStyle(
+                                                            fontSize: 12,
+                                                            color: Colors
+                                                                .grey.shade600),
+                                                        textAlign:
+                                                            TextAlign.center,
                                                       ),
                                                     ],
                                                   ),
@@ -474,10 +604,12 @@ class _VehicleEditScreenState extends State<VehicleEditScreen> {
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: Colors.white,
                                       foregroundColor: Colors.purple,
-                                      padding: const EdgeInsets.symmetric(vertical: 16),
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 16),
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(8),
-                                        side: const BorderSide(color: Colors.purple),
+                                        side: const BorderSide(
+                                            color: Colors.purple),
                                       ),
                                     ),
                                     child: const Text(
@@ -500,7 +632,8 @@ class _VehicleEditScreenState extends State<VehicleEditScreen> {
     );
   }
 
-  Widget buildTextField(String label, TextEditingController controller, {String? hint}) {
+  Widget buildTextField(String label, TextEditingController controller,
+      {String? hint}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
       child: Column(
@@ -518,7 +651,8 @@ class _VehicleEditScreenState extends State<VehicleEditScreen> {
                 borderRadius: BorderRadius.circular(8),
                 borderSide: BorderSide.none,
               ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
             ),
           ),
         ],
@@ -526,8 +660,8 @@ class _VehicleEditScreenState extends State<VehicleEditScreen> {
     );
   }
 
-  Widget buildDropdown(
-      String label, List<String> items, String? selectedItem, ValueChanged<String?> onChanged,
+  Widget buildDropdown(String label, List<String> items, String? selectedItem,
+      ValueChanged<String?> onChanged,
       {String? hint}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
@@ -538,7 +672,8 @@ class _VehicleEditScreenState extends State<VehicleEditScreen> {
           const SizedBox(height: 8),
           DropdownButtonFormField<String>(
             value: selectedItem,
-            hint: Text(hint ?? 'Pilih', style: TextStyle(color: Colors.grey.shade600)),
+            hint: Text(hint ?? 'Pilih',
+                style: TextStyle(color: Colors.grey.shade600)),
             items: items.map((String item) {
               return DropdownMenuItem<String>(
                 value: item,
@@ -553,7 +688,8 @@ class _VehicleEditScreenState extends State<VehicleEditScreen> {
                 borderRadius: BorderRadius.circular(8),
                 borderSide: BorderSide.none,
               ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
             ),
           ),
         ],
@@ -561,8 +697,9 @@ class _VehicleEditScreenState extends State<VehicleEditScreen> {
     );
   }
 
-  Widget buildAutocompleteTextField(
-      String label, TextEditingController controller, List<Map<String, dynamic>> models, {String? hint}) {
+  Widget buildAutocompleteTextField(String label,
+      TextEditingController controller, List<Map<String, dynamic>> models,
+      {String? hint}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
       child: Column(
@@ -575,8 +712,12 @@ class _VehicleEditScreenState extends State<VehicleEditScreen> {
               if (textEditingValue.text.isEmpty) {
                 return const Iterable<String>.empty();
               }
-              return models.map((m) => m['name'].toString()).where((String option) {
-                return option.toLowerCase().contains(textEditingValue.text.toLowerCase());
+              return models
+                  .map((m) => m['name'].toString())
+                  .where((String option) {
+                return option
+                    .toLowerCase()
+                    .contains(textEditingValue.text.toLowerCase());
               });
             },
             onSelected: (String selection) {
@@ -589,7 +730,9 @@ class _VehicleEditScreenState extends State<VehicleEditScreen> {
                 _selectedModelId = selectedModel['id'];
               });
             },
-            fieldViewBuilder: (BuildContext context, TextEditingController fieldController, FocusNode focusNode,
+            fieldViewBuilder: (BuildContext context,
+                TextEditingController fieldController,
+                FocusNode focusNode,
                 VoidCallback onFieldSubmitted) {
               fieldController.text = controller.text;
               return TextField(
@@ -603,7 +746,8 @@ class _VehicleEditScreenState extends State<VehicleEditScreen> {
                     borderRadius: BorderRadius.circular(8),
                     borderSide: BorderSide.none,
                   ),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
                 ),
                 onChanged: (value) {
                   controller.text = value;
@@ -637,7 +781,8 @@ class DashedRect extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return CustomPaint(
-      painter: _DashedRectPainter(color: color, strokeWidth: strokeWidth, gap: gap),
+      painter:
+          _DashedRectPainter(color: color, strokeWidth: strokeWidth, gap: gap),
       child: child,
     );
   }
@@ -664,7 +809,8 @@ class _DashedRectPainter extends CustomPainter {
     const dashWidth = 5.0;
     final space = gap;
 
-    void drawDashedLine(double startX, double startY, double endX, double endY) {
+    void drawDashedLine(
+        double startX, double startY, double endX, double endY) {
       final dx = endX - startX;
       final dy = endY - startY;
       final distance = sqrt(dx * dx + dy * dy);

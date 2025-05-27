@@ -82,44 +82,43 @@ class _ProfileState extends State<Profile> {
     }
   }
 
-  // Tambahkan fungsi helper ini di class Anda
-String _buildProfileImageUrl(String? profileImageUrl) {
-  if (profileImageUrl == null || profileImageUrl.isEmpty) {
-    return '';
-  }
+  String _buildProfileImageUrl(String? profileImageUrl) {
+  if (profileImageUrl == null || profileImageUrl.isEmpty) return '';
 
-  // Jika sudah URL lengkap, return langsung
+  // Sudah URL lengkap, langsung return
   if (profileImageUrl.startsWith('http://') || profileImageUrl.startsWith('https://')) {
     return profileImageUrl;
   }
 
   const String baseUrl = 'https://webfw23.myhost.id/gol_bws3';
-  
-  // Bersihkan path dari prefix yang tidak diperlukan
+
   String cleanPath = profileImageUrl;
-  
-  // Hapus prefix /public jika ada
+
+  // Hapus prefix "public/" jika ada
   if (cleanPath.startsWith('/public/')) {
-    cleanPath = cleanPath.substring(8); // Hapus "/public/"
+    cleanPath = cleanPath.substring(8);
   } else if (cleanPath.startsWith('public/')) {
-    cleanPath = cleanPath.substring(7); // Hapus "public/"
+    cleanPath = cleanPath.substring(7);
   }
-  
-  // Jika path dimulai dengan /uploads, tambahkan storage di depannya
-  if (cleanPath.startsWith('/uploads/')) {
-    cleanPath = '/storage$cleanPath';
-  } else if (cleanPath.startsWith('uploads/')) {
-    cleanPath = 'storage/$cleanPath';
-  }
-  
-  // Pastikan path dimulai dengan /
+
+  // Hindari "storage/" ganda
+  cleanPath = cleanPath.replaceFirst(RegExp(r'^storage/'), '');
+
+  // Ganti "users" jadi "mahasiswa"
+  cleanPath = cleanPath.replaceFirst('uploads/users/', 'uploads/mahasiswa/');
+
+  // Tambahkan prefix /storage jika perlu
+  cleanPath = 'storage/$cleanPath';
+
+  // Pastikan diawali dengan /
   if (!cleanPath.startsWith('/')) {
     cleanPath = '/$cleanPath';
   }
-  
-  // Gabungkan dengan base URL dan tambahkan /public
+
   return '$baseUrl/public$cleanPath';
 }
+
+
 
   Future<void> _handleLogout(BuildContext context) async {
     try {
