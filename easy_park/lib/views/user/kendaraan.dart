@@ -189,204 +189,201 @@ class _KendaraanScreenState extends State<KendaraanScreen> {
 
 
   Widget _buildVehicleCard({
-    required String name,
-    required String id,
-    required String plateNumber,
-    required String brand,
-    required String type,
-    required Map<String, dynamic> vehicle,
-  }) {
-    final qrCodePath = vehicle['qr_code'] ?? '';
-    final qrCodeUrl =
-        qrCodePath.isNotEmpty ? '$baseUrl/storage/$qrCodePath' : '';
+  required String name,
+  required String id,
+  required String plateNumber,
+  required String brand,
+  required String type,
+  required Map<String, dynamic> vehicle,
+}) {
+  final qrCodePath = vehicle['qr_code'] ?? '';
+  final qrCodeUrl =
+      qrCodePath.isNotEmpty ? '$baseUrl/public/storage/$qrCodePath' : '';
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Stack(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      name,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
+  return Container(
+    margin: const EdgeInsets.only(bottom: 16),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(8),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.05),
+          blurRadius: 4,
+          offset: const Offset(0, 2),
+        ),
+      ],
+    ),
+    child: Stack(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Text(
+                    name,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
                     ),
-                    const SizedBox(width: 8),
-                    Text(
-                      type,
-                      style: TextStyle(
-                        color: Colors.grey[600],
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  plateNumber,
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 14,
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  brand,
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 14,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () async {
-                          final result = await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  VehicleEditScreen(vehicle: vehicle),
-                            ),
-                          );
-                          await _fetchVehicles(); // Refresh vehicle list
-                          if (result != null) {
-                            // Check if the updated vehicle is the currently selected one
-                            final selectedVehicleInstance = SelectedVehicle();
-                            final currentSelectedVehicle =
-                                selectedVehicleInstance.vehicle;
-                            if (currentSelectedVehicle != null &&
-                                currentSelectedVehicle['id'] == result['id']) {
-                              // Update SelectedVehicle with the new vehicle data
-                              final updatedQrCodePath = result['qr_code'] ?? '';
-                              final updatedQrCodeUrl =
-                                  updatedQrCodePath.isNotEmpty
-                                      ? '$baseUrl/storage/$updatedQrCodePath'
-                                      : '';
-                              await selectedVehicleInstance.setSelectedVehicle(
-                                  updatedQrCodeUrl, result);
-                              print(
-                                  'Updated SelectedVehicle: $result'); // Debug print
-                            }
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                  content: Text(
-                                      'Kendaraan diperbarui: ${result['plate_number']}')),
-                            );
-                          }
-                        },
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.black, // Warna teks dan icon
-                          side: const BorderSide(color: Colors.grey),
-                        ),
-                        child: const Text('EDIT'),
-                      ),
+                  const SizedBox(width: 8),
+                  Text(
+                    type,
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 14,
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: selectedVehicleId == vehicle['id']
-                            ? null
-                            : () {
-                                SelectedVehicle()
-                                    .setSelectedVehicle(qrCodeUrl, vehicle);
-                                setState(() {
-                                  selectedVehicleId = vehicle['id'];
-                                });
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                      content: Text(
-                                          'Selected: $name ($plateNumber)')),
-                                );
-                                Navigator.of(context).pushAndRemoveUntil(
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        BottomNavigationWidget(initialTab: 2),
-                                  ),
-                                  (route) => false,
-                                );
-                              },
-                        style: OutlinedButton.styleFrom(
-                          backgroundColor: selectedVehicleId == vehicle['id']
-                              ? Colors.green[100]
-                              : Colors.white,
-                          side: const BorderSide(color: Colors.grey),
-                        ),
-                        child: Text(
-                          selectedVehicleId == vehicle['id']
-                              ? 'TERPILIH'
-                              : 'PILIH',
-                          style: TextStyle(
-                            color: selectedVehicleId == vehicle['id']
-                                ? Colors.green[800]
-                                : Colors.black,
-                            fontWeight: FontWeight.bold,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                plateNumber,
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                brand,
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () async {
+                        final result = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                VehicleEditScreen(vehicle: vehicle),
                           ),
+                        );
+                        await _fetchVehicles(); // Refresh vehicle list
+                        if (result != null) {
+                          final selectedVehicleInstance = SelectedVehicle();
+                          final currentSelectedVehicle =
+                              selectedVehicleInstance.vehicle;
+                          if (currentSelectedVehicle != null &&
+                              currentSelectedVehicle['id'] == result['id']) {
+                            final updatedQrCodePath = result['qr_code'] ?? '';
+                            final updatedQrCodeUrl = updatedQrCodePath.isNotEmpty
+                                ? '$baseUrl/public/storage/$updatedQrCodePath'
+                                : '';
+                            await selectedVehicleInstance.setSelectedVehicle(
+                                updatedQrCodeUrl, result);
+                            print('Updated SelectedVehicle: $result');
+                          }
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                                content: Text(
+                                    'Kendaraan diperbarui: ${result['plate_number']}')),
+                          );
+                        }
+                      },
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.black,
+                        side: const BorderSide(color: Colors.grey),
+                      ),
+                      child: const Text('EDIT'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: selectedVehicleId == vehicle['id']
+                          ? null
+                          : () {
+                              SelectedVehicle()
+                                  .setSelectedVehicle(qrCodeUrl, vehicle);
+                              setState(() {
+                                selectedVehicleId = vehicle['id'];
+                              });
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                    content: Text(
+                                        'Selected: $name ($plateNumber)')),
+                              );
+                              Navigator.of(context).pushAndRemoveUntil(
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      BottomNavigationWidget(initialTab: 2),
+                                ),
+                                (route) => false,
+                              );
+                            },
+                      style: OutlinedButton.styleFrom(
+                        backgroundColor: selectedVehicleId == vehicle['id']
+                            ? Colors.green[100]
+                            : Colors.white,
+                        side: const BorderSide(color: Colors.grey),
+                      ),
+                      child: Text(
+                        selectedVehicleId == vehicle['id']
+                            ? 'TERPILIH'
+                            : 'PILIH',
+                        style: TextStyle(
+                          color: selectedVehicleId == vehicle['id']
+                              ? Colors.green[800]
+                              : Colors.black,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        Positioned(
+          top: 8,
+          right: 8,
+          child: IconButton(
+            icon: _buildTrashSvg(),
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Hapus Kendaraan'),
+                  content: Text(
+                      'Apakah Anda yakin ingin menghapus $name ($plateNumber)?'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('BATAL'),
+                    ),
+                    TextButton(
+                      onPressed: () async {
+                        Navigator.pop(context);
+                        await _deleteVehicle(int.parse(id), name);
+                      },
+                      child: const Text('HAPUS'),
+                    ),
                   ],
                 ),
-              ],
-            ),
+              );
+            },
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+            iconSize: 24,
+            splashRadius: 24,
           ),
-          Positioned(
-            top: 8,
-            right: 8,
-            child: IconButton(
-              icon: _buildTrashSvg(),
-              onPressed: () {
-                showDialog(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    title: const Text('Hapus Kendaraan'),
-                    content: Text(
-                        'Apakah Anda yakin ingin menghapus $name ($plateNumber)?'),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('BATAL'),
-                      ),
-                      TextButton(
-                        onPressed: () async {
-                          Navigator.pop(context);
-                          await _deleteVehicle(int.parse(id), name);
-                        },
-                        child: const Text('HAPUS'),
-                      ),
-                    ],
-                  ),
-                );
-              },
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-              iconSize: 24,
-              splashRadius: 24,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+        ),
+      ],
+    ),
+  );
+}
+
 
   Widget _buildTrashSvg() {
     return SvgPicture.asset(

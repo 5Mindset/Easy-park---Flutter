@@ -1,5 +1,7 @@
-const String apiBaseUrl = 'http://192.168.109.63:8000/api'; // API base URL
-const String baseUrl = 'http://192.168.109.63:8000'; // Base URL for images and other assetsm
+// const String apiBaseUrl = 'http://192.168.200.63:8000/api'; // API base URL
+// const String baseUrl = 'http://192.168.200.63:8000'; // Base URL for images and other assetsm
 
-// const String apiBaseUrl = 'https://webfw23.myhost.id/gol_bws3/api'; // API base URL
-// const String baseUrl = 'https://webfw23.myhost.id/gol_bws3'; // Base URL for images and other assets
+const String apiBaseUrl = 'https://webfw23.myhost.id/gol_bws3/api'; // API base URL
+const String baseUrl = 'https://webfw23.myhost.id/gol_bws3/';
+
+
