@@ -27,7 +27,8 @@ class VehicleService {
         },
       );
 
-      print('Debug: getVehicles Response: ${response.statusCode} ${response.body}');
+      print(
+          'Debug: getVehicles Response: ${response.statusCode} ${response.body}');
 
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
@@ -45,7 +46,8 @@ class VehicleService {
         final body = jsonDecode(response.body);
         return {
           'success': false,
-          'message': body['message'] ?? 'Failed to fetch vehicles: ${response.statusCode}',
+          'message': body['message'] ??
+              'Failed to fetch vehicles: ${response.statusCode}',
           'error': body['error'] ?? 'No additional error details provided',
         };
       }
@@ -79,7 +81,8 @@ class VehicleService {
         },
       );
 
-      print('Debug: getVehicleBrands Response: ${response.statusCode} ${response.body}');
+      print(
+          'Debug: getVehicleBrands Response: ${response.statusCode} ${response.body}');
 
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
@@ -97,7 +100,8 @@ class VehicleService {
         final body = jsonDecode(response.body);
         return {
           'success': false,
-          'message': body['message'] ?? 'Failed to fetch vehicle brands: ${response.statusCode}',
+          'message': body['message'] ??
+              'Failed to fetch vehicle brands: ${response.statusCode}',
           'error': body['error'] ?? 'No additional error details provided',
         };
       }
@@ -131,7 +135,8 @@ class VehicleService {
         },
       );
 
-      print('Debug: getVehicleTypes Response: ${response.statusCode} ${response.body}');
+      print(
+          'Debug: getVehicleTypes Response: ${response.statusCode} ${response.body}');
 
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
@@ -149,7 +154,8 @@ class VehicleService {
         final body = jsonDecode(response.body);
         return {
           'success': false,
-          'message': body['message'] ?? 'Failed to fetch vehicle types: ${response.statusCode}',
+          'message': body['message'] ??
+              'Failed to fetch vehicle types: ${response.statusCode}',
           'error': body['error'] ?? 'No additional error details provided',
         };
       }
@@ -163,7 +169,8 @@ class VehicleService {
     }
   }
 
-  static Future<Map<String, dynamic>> getVehicleModels(int brandId, int typeId) async {
+  static Future<Map<String, dynamic>> getVehicleModels(
+      int brandId, int typeId) async {
     try {
       final savedUser = await LocalDbService.getLogin();
       final token = savedUser?['token'] as String?;
@@ -176,14 +183,16 @@ class VehicleService {
       }
 
       final response = await http.get(
-        Uri.parse('$apiBaseUrl/vehicle-models?vehicle_brand_id=$brandId&vehicle_type_id=$typeId'),
+        Uri.parse(
+            '$apiBaseUrl/vehicle-models?vehicle_brand_id=$brandId&vehicle_type_id=$typeId'),
         headers: {
           'Authorization': 'Bearer $token',
           'Accept': 'application/json',
         },
       );
 
-      print('Debug: getVehicleModels Response: ${response.statusCode} ${response.body}');
+      print(
+          'Debug: getVehicleModels Response: ${response.statusCode} ${response.body}');
 
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
@@ -201,7 +210,8 @@ class VehicleService {
         final body = jsonDecode(response.body);
         return {
           'success': false,
-          'message': body['message'] ?? 'Failed to fetch vehicle models: ${response.statusCode}',
+          'message': body['message'] ??
+              'Failed to fetch vehicle models: ${response.statusCode}',
           'error': body['error'] ?? 'No additional error details provided',
         };
       }
@@ -235,7 +245,8 @@ class VehicleService {
         },
       );
 
-      print('Debug: getVehicleBrandsByType Response: ${response.statusCode} ${response.body}');
+      print(
+          'Debug: getVehicleBrandsByType Response: ${response.statusCode} ${response.body}');
 
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
@@ -253,7 +264,8 @@ class VehicleService {
         final body = jsonDecode(response.body);
         return {
           'success': false,
-          'message': body['message'] ?? 'Failed to fetch vehicle brands by type: ${response.statusCode}',
+          'message': body['message'] ??
+              'Failed to fetch vehicle brands by type: ${response.statusCode}',
           'error': body['error'] ?? 'No additional error details provided',
         };
       }
@@ -267,7 +279,8 @@ class VehicleService {
     }
   }
 
-  static Future<Map<String, dynamic>> getVehicleModelsByBrand(int brandId) async {
+  static Future<Map<String, dynamic>> getVehicleModelsByBrand(
+      int brandId) async {
     try {
       final savedUser = await LocalDbService.getLogin();
       final token = savedUser?['token'] as String?;
@@ -287,7 +300,8 @@ class VehicleService {
         },
       );
 
-      print('Debug: getVehicleModelsByBrand Response: ${response.statusCode} ${response.body}');
+      print(
+          'Debug: getVehicleModelsByBrand Response: ${response.statusCode} ${response.body}');
 
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
@@ -305,7 +319,8 @@ class VehicleService {
         final body = jsonDecode(response.body);
         return {
           'success': false,
-          'message': body['message'] ?? 'Failed to fetch vehicle models by brand: ${response.statusCode}',
+          'message': body['message'] ??
+              'Failed to fetch vehicle models by brand: ${response.statusCode}',
           'error': body['error'] ?? 'No additional error details provided',
         };
       }
@@ -356,20 +371,23 @@ class VehicleService {
         if (!['jpg', 'jpeg', 'png'].contains(extension)) {
           return {
             'success': false,
-            'message': 'Invalid image format. Only JPG, JPEG, or PNG are allowed.',
+            'message':
+                'Invalid image format. Only JPG, JPEG, or PNG are allowed.',
           };
         }
 
         request.files.add(await http.MultipartFile.fromPath(
           'stnk_image',
           stnkImage.path,
-          contentType: MediaType('image', extension == 'jpg' ? 'jpeg' : extension),
+          contentType:
+              MediaType('image', extension == 'jpg' ? 'jpeg' : extension),
         ));
       }
 
       print('Debug: Request Headers: ${request.headers}');
       print('Debug: Request Fields: ${request.fields}');
-      print('Debug: Request Files: ${request.files.map((f) => f.filename).toList()}');
+      print(
+          'Debug: Request Files: ${request.files.map((f) => f.filename).toList()}');
 
       final client = http.Client();
       final streamedResponse = await client.send(request);
@@ -392,7 +410,8 @@ class VehicleService {
             'message': 'Vehicle added, but response is not JSON.',
           };
         }
-      } else if (streamedResponse.statusCode == 401 || streamedResponse.statusCode == 403) {
+      } else if (streamedResponse.statusCode == 401 ||
+          streamedResponse.statusCode == 403) {
         return {
           'success': false,
           'message': 'Unauthorized action. Please log in again.',
@@ -409,7 +428,8 @@ class VehicleService {
         final body = jsonDecode(responseBody);
         return {
           'success': false,
-          'message': body['message'] ?? 'Failed to add vehicle: ${streamedResponse.statusCode}',
+          'message': body['message'] ??
+              'Failed to add vehicle: ${streamedResponse.statusCode}',
           'error': body['error'] ?? responseBody,
         };
       }
@@ -462,20 +482,23 @@ class VehicleService {
         if (!['jpg', 'jpeg', 'png'].contains(extension)) {
           return {
             'success': false,
-            'message': 'Invalid image format. Only JPG, JPEG, or PNG are allowed.',
+            'message':
+                'Invalid image format. Only JPG, JPEG, or PNG are allowed.',
           };
         }
 
         request.files.add(await http.MultipartFile.fromPath(
           'stnk_image',
           stnkImage.path,
-          contentType: MediaType('image', extension == 'jpg' ? 'jpeg' : extension),
+          contentType:
+              MediaType('image', extension == 'jpg' ? 'jpeg' : extension),
         ));
       }
 
       print('Debug: Request Headers: ${request.headers}');
       print('Debug: Request Fields: ${request.fields}');
-      print('Debug: Request Files: ${request.files.map((f) => f.filename).toList()}');
+      print(
+          'Debug: Request Files: ${request.files.map((f) => f.filename).toList()}');
 
       final client = http.Client();
       final streamedResponse = await client.send(request);
@@ -498,7 +521,8 @@ class VehicleService {
             'message': 'Vehicle updated, but response is not JSON.',
           };
         }
-      } else if (streamedResponse.statusCode == 401 || streamedResponse.statusCode == 403) {
+      } else if (streamedResponse.statusCode == 401 ||
+          streamedResponse.statusCode == 403) {
         return {
           'success': false,
           'message': 'Unauthorized action. Please log in again.',
@@ -507,7 +531,8 @@ class VehicleService {
       } else if (streamedResponse.statusCode == 404) {
         return {
           'success': false,
-          'message': 'Vehicle not found or you do not have permission to update it',
+          'message':
+              'Vehicle not found or you do not have permission to update it',
           'error': 'Not found',
         };
       } else if (streamedResponse.statusCode == 422) {
@@ -521,7 +546,8 @@ class VehicleService {
         final body = jsonDecode(responseBody);
         return {
           'success': false,
-          'message': body['message'] ?? 'Failed to update vehicle: ${streamedResponse.statusCode}',
+          'message': body['message'] ??
+              'Failed to update vehicle: ${streamedResponse.statusCode}',
           'error': body['error'] ?? responseBody,
         };
       }
@@ -558,7 +584,8 @@ class VehicleService {
         },
       );
 
-      print('Debug: deleteVehicle Response: ${response.statusCode} ${response.body}');
+      print(
+          'Debug: deleteVehicle Response: ${response.statusCode} ${response.body}');
 
       if (response.statusCode == 204) {
         return {
@@ -574,14 +601,16 @@ class VehicleService {
       } else if (response.statusCode == 404) {
         return {
           'success': false,
-          'message': 'Vehicle not found or you do not have permission to delete it',
+          'message':
+              'Vehicle not found or you do not have permission to delete it',
           'error': 'Not found',
         };
       } else {
         final body = jsonDecode(response.body);
         return {
           'success': false,
-          'message': body['message'] ?? 'Failed to delete vehicle: ${response.statusCode}',
+          'message': body['message'] ??
+              'Failed to delete vehicle: ${response.statusCode}',
           'error': body['error'] ?? 'No additional error details provided',
         };
       }
@@ -625,7 +654,8 @@ class VehicleService {
         }),
       );
 
-      print('Debug: createVehicleModel Response: ${response.statusCode} ${response.body}');
+      print(
+          'Debug: createVehicleModel Response: ${response.statusCode} ${response.body}');
 
       if (response.statusCode == 201) {
         final data = jsonDecode(response.body);
@@ -651,7 +681,8 @@ class VehicleService {
         final body = jsonDecode(response.body);
         return {
           'success': false,
-          'message': body['message'] ?? 'Failed to create vehicle model: ${response.statusCode}',
+          'message': body['message'] ??
+              'Failed to create vehicle model: ${response.statusCode}',
           'error': body['error'] ?? 'No additional error details provided',
         };
       }
@@ -660,6 +691,37 @@ class VehicleService {
       return {
         'success': false,
         'message': 'Error creating vehicle model: $e',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  // Alternative method jika backend belum ada endpoint count
+  static Future<Map<String, dynamic>> getUserVehicleCount() async {
+    try {
+      // Menggunakan method getVehicles() yang sudah ada
+      final vehicleResult = await getVehicles();
+
+      if (vehicleResult['success']) {
+        final List<dynamic> vehicles = vehicleResult['data'] ?? [];
+        return {
+          'success': true,
+          'data': {
+            'count': vehicles.length,
+          },
+        };
+      } else {
+        return {
+          'success': false,
+          'message': vehicleResult['message'] ?? 'Failed to get vehicle count',
+          'error': vehicleResult['error'],
+        };
+      }
+    } catch (e) {
+      print('Debug: getUserVehicleCount Error: $e');
+      return {
+        'success': false,
+        'message': 'Error fetching vehicle count: $e',
         'error': e.toString(),
       };
     }

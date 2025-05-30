@@ -317,7 +317,8 @@ class _QRCodeState extends State<QRCode> with WidgetsBindingObserver {
                       ),
                       const SizedBox(height: 8),
                       const Text(
-                        'Silakan hubungi administrator',
+                        'Klik tombol PILIH di tab Kendaraan jika Anda sudah memiliki kendaraan',
+                        textAlign: TextAlign.center,
                         style: TextStyle(color: Colors.grey),
                       ),
                       const SizedBox(height: 16),
