@@ -76,6 +76,14 @@ class _DaftarTamuState extends State<DaftarTamu> {
     } catch (e) {
       setState(() => isLoading = false);
       debugPrint('Error fetching tamu list: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal memuat data: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -83,7 +91,9 @@ class _DaftarTamuState extends State<DaftarTamu> {
     setState(() {
       searchQuery = query.toLowerCase();
       filteredList = tamuList
-          .where((tamu) => tamu.nama.toLowerCase().contains(searchQuery))
+          .where((tamu) => 
+              tamu.nama.toLowerCase().contains(searchQuery) ||
+              tamu.kode.toLowerCase().contains(searchQuery))
           .toList();
       
       // Keep the descending order after filtering
@@ -96,7 +106,18 @@ class _DaftarTamuState extends State<DaftarTamu> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Konfirmasi'),
-        content: Text('Apakah Anda yakin kendaraan dengan plat ${tamu.kode} akan keluar?'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Apakah Anda yakin kendaraan dengan plat ${tamu.kode} akan keluar?'),
+            const SizedBox(height: 8),
+            Text('Nama: ${tamu.nama}', style: const TextStyle(fontSize: 12)),
+            Text('Kendaraan: ${tamu.kendaraan}', style: const TextStyle(fontSize: 12)),
+            Text('Area: ${tamu.parkingArea}', style: const TextStyle(fontSize: 12)),
+            Text('Masuk: ${tamu.waktu}', style: const TextStyle(fontSize: 12)),
+          ],
+        ),
         actions: [
           TextButton(
             child: const Text('BATAL'),
@@ -112,6 +133,21 @@ class _DaftarTamuState extends State<DaftarTamu> {
 
     if (confirm != true) return;
 
+    // Show loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        content: Row(
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(width: 16),
+            Text('Memproses...'),
+          ],
+        ),
+      ),
+    );
+
     try {
       final response = await http.put(
         Uri.parse('$apiBaseUrl/guest-vehicles/${tamu.id}/exit'),
@@ -121,29 +157,57 @@ class _DaftarTamuState extends State<DaftarTamu> {
         },
       );
 
+      // Close loading dialog
+      Navigator.pop(context);
+
       if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Kendaraan berhasil keluar'),
+          SnackBar(
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(responseData['message'] ?? 'Kendaraan berhasil keluar'),
+                if (responseData['returned_area'] != null)
+                  Text(
+                    'Area dikembalikan: ${responseData['returned_area']} m²',
+                    style: const TextStyle(fontSize: 12),
+                  ),
+              ],
+            ),
             backgroundColor: Colors.green,
+            duration: const Duration(seconds: 4),
           ),
         );
         _loadTokenAndFetchData(); // refresh data
       } else {
+        final error = jsonDecode(response.body);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Gagal keluar: ${response.body}'),
+            content: Text('Gagal keluar: ${error['message'] ?? response.body}'),
             backgroundColor: Colors.red,
           ),
         );
       }
     } catch (e) {
+      // Close loading dialog if still open
+      Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Terjadi kesalahan: $e'),
           backgroundColor: Colors.red,
         ),
       );
+    }
+  }
+
+  Future<void> _refreshData() async {
+    if (_token != null) {
+      setState(() {
+        isLoading = true;
+      });
+      await fetchTamuList(_token!);
     }
   }
 
@@ -157,19 +221,30 @@ class _DaftarTamuState extends State<DaftarTamu> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Daftar tamu',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.indigo,
-                ),
+              Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Daftar tamu',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.indigo,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: _refreshData,
+                    icon: const Icon(Icons.refresh),
+                    tooltip: 'Refresh',
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
               TextField(
                 onChanged: _filterSearch,
                 decoration: InputDecoration(
-                  hintText: 'Cari nama...',
+                  hintText: 'Cari nama atau plat nomor...',
                   prefixIcon: const Icon(Icons.search),
                   filled: true,
                   fillColor: Colors.white,
@@ -181,19 +256,50 @@ class _DaftarTamuState extends State<DaftarTamu> {
                 ),
               ),
               const SizedBox(height: 16),
+              if (!isLoading && filteredList.isNotEmpty)
+                Text(
+                  'Total: ${filteredList.length} kendaraan',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey,
+                  ),
+                ),
+              const SizedBox(height: 8),
               Expanded(
                 child: isLoading
                     ? const Center(child: CircularProgressIndicator())
                     : filteredList.isEmpty
-                        ? const Center(child: Text('Tidak ada tamu yang sedang parkir.'))
-                        : ListView.builder(
-                            itemCount: filteredList.length,
-                            itemBuilder: (context, index) {
-                              return TamuCard(
-                                tamu: filteredList[index],
-                                onExit: () => exitTamu(filteredList[index]),
-                              );
-                            },
+                        ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(
+                                  Icons.local_parking,
+                                  size: 64,
+                                  color: Colors.grey,
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  searchQuery.isEmpty 
+                                    ? 'Tidak ada tamu yang sedang parkir.' 
+                                    : 'Tidak ditemukan tamu dengan kata kunci "$searchQuery"',
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(color: Colors.grey),
+                                ),
+                              ],
+                            ),
+                          )
+                        : RefreshIndicator(
+                            onRefresh: _refreshData,
+                            child: ListView.builder(
+                              itemCount: filteredList.length,
+                              itemBuilder: (context, index) {
+                                return TamuCard(
+                                  tamu: filteredList[index],
+                                  onExit: () => exitTamu(filteredList[index]),
+                                );
+                              },
+                            ),
                           ),
               ),
             ],
@@ -210,7 +316,8 @@ class Tamu {
   final String kendaraan;
   final String waktu;
   final String kode;
-  final DateTime entryDateTime; // Added for sorting
+  final String parkingArea;
+  final DateTime entryDateTime;
 
   Tamu({
     required this.id,
@@ -218,6 +325,7 @@ class Tamu {
     required this.kendaraan,
     required this.waktu,
     required this.kode,
+    required this.parkingArea,
     required this.entryDateTime,
   });
 
@@ -235,12 +343,21 @@ class Tamu {
       // Keep the default DateTime.now() as fallback
     }
 
+    // Extract parking area information
+    String parkingAreaName = 'Area Default';
+    if (json['parking_area'] != null && json['parking_area']['name'] != null) {
+      parkingAreaName = json['parking_area']['name'];
+    } else if (json['parking_area_id'] != null) {
+      parkingAreaName = 'Area ${json['parking_area_id']}';
+    }
+
     return Tamu(
       id: json['id'],
       nama: json['name'] ?? '',
       kendaraan: json['vehicle_type']?['name'] ?? '-',
       waktu: entryTimeString.isNotEmpty ? entryTimeString.substring(11, 16) : '-',
       kode: json['plate_number'] ?? '',
+      parkingArea: parkingAreaName,
       entryDateTime: entryDateTime,
     );
   }
@@ -278,11 +395,45 @@ class TamuCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(tamu.nama, style: const TextStyle(fontWeight: FontWeight.bold)),
+                Text(
+                  tamu.nama, 
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
                 const SizedBox(height: 4),
-                Text('${tamu.kendaraan} · ${tamu.waktu}', style: const TextStyle(fontSize: 12)),
-                const SizedBox(height: 4),
-                Text(tamu.kode, style: const TextStyle(fontSize: 12)),
+                Text(
+                  '${tamu.kendaraan} · ${tamu.waktu}', 
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  tamu.kode, 
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.indigo.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    tamu.parkingArea,
+                    style: const TextStyle(
+                      fontSize: 10,
+                      color: Colors.indigo,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
               ],
             ),
           ),

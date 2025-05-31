@@ -17,14 +17,15 @@ class _ParkirTamuState extends State<ParkirTamu> {
   int? _selectedTypeId;
   List<dynamic> _vehicleTypes = [];
   String? _token;
+  bool _isLoadingTypes = false;
 
   @override
   void initState() {
     super.initState();
-    _loadTokenAndFetchTypes();
+    _loadTokenAndFetchData();
   }
 
-  Future<void> _loadTokenAndFetchTypes() async {
+  Future<void> _loadTokenAndFetchData() async {
     final savedLogin = await LocalDbService.getLogin();
     final token = savedLogin?['token'];
     if (token != null) {
@@ -36,6 +37,10 @@ class _ParkirTamuState extends State<ParkirTamu> {
   }
 
   Future<void> _fetchVehicleTypes(String token) async {
+    setState(() {
+      _isLoadingTypes = true;
+    });
+    
     try {
       final response = await http.get(
         Uri.parse('$apiBaseUrl/vehicle-types'),
@@ -51,6 +56,13 @@ class _ParkirTamuState extends State<ParkirTamu> {
       }
     } catch (e) {
       debugPrint('Gagal mengambil tipe kendaraan: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal memuat tipe kendaraan: $e')),
+      );
+    } finally {
+      setState(() {
+        _isLoadingTypes = false;
+      });
     }
   }
 
@@ -65,7 +77,30 @@ class _ParkirTamuState extends State<ParkirTamu> {
       return;
     }
 
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        content: Row(
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(width: 16),
+            Text('Menyimpan data...'),
+          ],
+        ),
+      ),
+    );
+
     try {
+      final body = {
+        'name': _namaController.text,
+        'plate_number': _platController.text,
+        'vehicle_type_id': _selectedTypeId,
+        'status': 'parked',
+        // Area parkir akan menggunakan default dari backend
+      };
+
       final response = await http.post(
         Uri.parse('$apiBaseUrl/guest-vehicles'),
         headers: {
@@ -73,13 +108,11 @@ class _ParkirTamuState extends State<ParkirTamu> {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
         },
-        body: jsonEncode({
-          'name': _namaController.text, // ubah dari 'owner_name'
-          'plate_number': _platController.text,
-          'vehicle_type_id': _selectedTypeId,
-          'status': 'parked',
-        }),
+        body: jsonEncode(body),
       );
+
+      // Close loading dialog
+      Navigator.pop(context);
 
       if (response.statusCode == 201) {
         showDialog(
@@ -92,11 +125,7 @@ class _ParkirTamuState extends State<ParkirTamu> {
               TextButton(
                 onPressed: () {
                   Navigator.pop(context); // tutup dialog
-                  _namaController.clear();
-                  _platController.clear();
-                  setState(() {
-                    _selectedTypeId = null;
-                  });
+                  _clearForm();
                 },
                 child: const Text('OK'),
               ),
@@ -107,14 +136,29 @@ class _ParkirTamuState extends State<ParkirTamu> {
         final error = jsonDecode(response.body);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text('Gagal: ${error['message'] ?? response.body}')),
+            content: Text('Gagal: ${error['message'] ?? response.body}'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     } catch (e) {
+      // Close loading dialog if still open
+      Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Terjadi kesalahan: $e')),
+        SnackBar(
+          content: Text('Terjadi kesalahan: $e'),
+          backgroundColor: Colors.red,
+        ),
       );
     }
+  }
+
+  void _clearForm() {
+    _namaController.clear();
+    _platController.clear();
+    setState(() {
+      _selectedTypeId = null;
+    });
   }
 
   @override
@@ -129,7 +173,10 @@ class _ParkirTamuState extends State<ParkirTamu> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text("Nama tamu"),
+              const Text(
+                "Nama tamu",
+                style: TextStyle(fontWeight: FontWeight.w500),
+              ),
               const SizedBox(height: 8),
               TextField(
                 controller: _namaController,
@@ -141,10 +188,14 @@ class _ParkirTamuState extends State<ParkirTamu> {
                 ),
               ),
               const SizedBox(height: 20),
-              const Text("Plat Nomor"),
+              const Text(
+                "Plat Nomor",
+                style: TextStyle(fontWeight: FontWeight.w500),
+              ),
               const SizedBox(height: 8),
               TextField(
                 controller: _platController,
+                textCapitalization: TextCapitalization.characters,
                 decoration: InputDecoration(
                   hintText: "contoh: B 1234 ABC",
                   border: OutlineInputBorder(
@@ -153,22 +204,27 @@ class _ParkirTamuState extends State<ParkirTamu> {
                 ),
               ),
               const SizedBox(height: 20),
-              const Text("Tipe Kendaraan"),
+              const Text(
+                "Tipe Kendaraan",
+                style: TextStyle(fontWeight: FontWeight.w500),
+              ),
               const SizedBox(height: 8),
               DropdownButtonFormField<int>(
                 value: _selectedTypeId,
                 items: _vehicleTypes.map<DropdownMenuItem<int>>((type) {
+                  final areaSize = double.parse(type['area_size'].toString());
                   return DropdownMenuItem<int>(
                     value: type['id'],
-                    child: Text(type['name']),
+                    child: Text('${type['name']} (${areaSize.toStringAsFixed(1)} m²)'),
                   );
                 }).toList(),
-                onChanged: (value) {
+                onChanged: _isLoadingTypes ? null : (value) {
                   setState(() {
                     _selectedTypeId = value;
                   });
                 },
                 decoration: InputDecoration(
+                  hintText: _isLoadingTypes ? 'Memuat...' : 'Pilih tipe kendaraan',
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -178,7 +234,7 @@ class _ParkirTamuState extends State<ParkirTamu> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: _submit,
+                  onPressed: _isLoadingTypes ? null : _submit,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF130160),
                     padding: const EdgeInsets.symmetric(vertical: 16),
@@ -197,5 +253,12 @@ class _ParkirTamuState extends State<ParkirTamu> {
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _namaController.dispose();
+    _platController.dispose();
+    super.dispose();
   }
 }
